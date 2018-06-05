@@ -1,0 +1,1 @@
+convert -loop 0 -delay 10 'img/%d.png[0-999]' out.gif
