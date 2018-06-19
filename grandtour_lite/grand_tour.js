@@ -3,10 +3,15 @@ var gt = {};
 
 
 
-gt.init = function(ndim){
+gt.init = function(ndim, stepsize){
   this.ndim = ndim;
   this.N = ndim*ndim;
-  this.STEPSIZE = Math.PI * Math.PI / 3000;
+  if (stepsize !== undefined){
+    this.STEPSIZE = stepsize;
+  }else{
+    this.STEPSIZE = Math.PI * Math.PI / 500 / ndim;
+  }
+
   this.initThetas(this.N);
 };
 
@@ -14,7 +19,7 @@ gt.init = function(ndim){
 gt.initThetas = function(N){
   this.thetas = new Array(N);
   for(var i=0; i<N; i++){
-    this.thetas[i] = Math.random();
+    this.thetas[i] = (Math.random()/2) * Math.PI*2;
   }
 }
 
@@ -29,15 +34,15 @@ gt.setNdim = function(newNdim){
 
 
 
-// gt.getRotationMatrix = function(dim0, dim1, theta){
-//   var res = math.eye(this.ndim)._data;
-//   res[dim0][dim0] = Math.cos(theta);
-//   res[dim0][dim1] = Math.sin(theta);
+gt.getRotationMatrix = function(dim0, dim1, theta){
+  var res = math.eye(this.ndim)._data;
+  res[dim0][dim0] = Math.cos(theta);
+  res[dim0][dim1] = Math.sin(theta);
 
-//   res[dim1][dim0] = -Math.sin(theta);
-//   res[dim1][dim1] = Math.cos(theta);
-//   return res;
-// }
+  res[dim1][dim0] = -Math.sin(theta);
+  res[dim1][dim1] = Math.cos(theta);
+  return res;
+}
 
 
 gt.multiplyRotationMatrix = function(matrix, i,j, theta){

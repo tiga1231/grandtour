@@ -14,19 +14,44 @@ var data, labels;
 var points, colors;
 var dmax;
 var t = 0;
+var ndim;
+var npoint;
 
 // var layer = 'fc3';
 // var modelid = 1;
-// var epoch = 1;
+var epoch = 99;
 // var fn = constructFileName(modelid, layer, epoch);
 
-var fn = 'mc1.csv';
-var fn_labels = './labels.csv';
+// var fn = 'data/activation_softmax_epoch300.csv';
+var fn = 'data/cifar10_pred/activation_softmax_epoch99.bin';
+// var fn = 'data/activation_conv2_epoch300.csv';
+
+var fn_labels = 'data/cifar10_pred/labels.bin';
 var shouldAnimate = true;
 
 function constructFileName(modelid, layer, epoch){
-    fn = 'fc3/net'+modelid+'_fc3.csv';
+    fn = 'data/cifar10_pred/activation_softmax_epoch'+epoch+'.bin';
     return fn;
+}
+
+
+function setEpoch(epoch){
+    let url = constructFileName('','',epoch);
+    loadData(url, 'bin', function(buffer, url, i){
+        let fn_json = url.split('_');
+            fn_json = fn_json.slice(0,fn_json.length-1).join('_') + '.json';
+
+        loadData(fn_json, 'json', (jsonObj)=>{
+            data = reshape(new Float32Array(buffer), jsonObj.shape);
+            data = data.concat(createAxisPoints(ndim));
+            points = gt.project(data, t);
+        });
+    });
+}
+
+function nextEpoch(){
+    epoch = (epoch+1)%100;
+    setEpoch(epoch);
 }
 
 
@@ -70,27 +95,60 @@ function pauseOrPlay(){
 }
 
 
-function loadData(fn, shouldUpdateDmax=false){
-    d3.text(fn)
-    .then(function(data_text){
-        data = d3.dsvFormat(',').parseRows(data_text);
-        var ndim = data[0].length;
-        if(preprocess !== null){
-            data = data.map(row => preprocess(row));
-        }
-        data = data.concat(createAxisPoints(ndim));
+function loadData(urls, mode, callback){
+    if(typeof(urls) === 'string'){
+        urls = [urls, ];
+    }
 
-        gt.setNdim(data[0].length);
-        if(shouldUpdateDmax){
-            updateDmax();
+    if(mode == 'text'){
+        var promises = urls.map(url=>d3.text(url));
+        Promise.all(promises)
+        .then((data_texts) => {
+            callback(data_texts, urls);
+        });
+        return;
+    }else{
+        for(let i=0; i<urls.length; i++){
+            let url = urls[i];
+            if(mode == 'bin'){    
+                let xhr = new window.XMLHttpRequest();
+                let ready = false;
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState === 4 
+                    && xhr.status === 200
+                    && ready !== true) {
+                        if (xhr.responseType === "arraybuffer"){
+                            callback(xhr.response, url, i);
+                        }else if(xhr.mozResponseArrayBuffer !== null){
+                            callback(xhr.mozResponseArrayBuffer, url, i);
+                        }else if(xhr.responseText !== null){
+                            let data = String(xhr.responseText);
+                            let ary = new Array(data.length);
+                            for (var j = 0; j<data.length; j++) {
+                                ary[j] = data.charCodeAt(j) & 0xff;
+                            }
+                            let uint8ay = new Uint8Array(ary);
+                            callback(uint8ay.buffer, url, i);
+                        }
+                        ready = true;
+                    }
+                };
+                xhr.open("GET", url, true);
+                xhr.responseType="arraybuffer";
+                xhr.send();
+            }else if(mode=='json'){
+                d3.json(url)
+                .then((data) =>
+                    callback(data, url, i));
+            }
         }
-    });
+    }
 }
+
 
 function updateDmax(){
     dmax = 1.414*math.max(math.abs(data));
 }
-
 
 
 function createAxisPoints(ndim){
@@ -108,6 +166,25 @@ function createAxisColors(ndim){
 }
 
 
+function changeSuffx(fn, newSuffix){
+    let newFn = fn.split('.');
+    newFn[newFn.length-1] = newSuffix;
+    newFn = newFn.join('.');
+    return newFn;
+}
+
+function reshape(array, shape){
+    var res = [];
+    for(let row=0; row<shape[0]; row++){
+        res.push([]);
+        for(let col=0; col<shape[1]; col++){
+            res[res.length-1].push(array[shape[1] * row + col]);
+        }
+    }
+    return res;
+}
+
+
 window.onload = function main(){
 
     baseColors = [
@@ -121,37 +198,75 @@ window.onload = function main(){
     rotateAngles = {x:0, y:0, z:0};
     ctm = getCtm();
 
-    var p1 = d3.text(fn);
-    var p2 = d3.text(fn_labels);
+    // loadData([fn, fn_labels], 'text',
+    //     function(data_and_labels){
+    //         data = data_and_labels[0];
+    //         labels = data_and_labels[1];
+    //         data = d3.dsvFormat(',').parseRows(data);
+    //         data = data.map(row=>{
+    //             return preprocess(row);
+    //         });
+    //         var ndim = data[0].length;
+    //         data = data.concat(createAxisPoints(ndim));
+
+    //         labels = d3.dsvFormat(',').parseRows(labels);
+    //         labels = labels.map(function(row){
+    //             return +row[0];
+    //         });
+
+    //         dmax = 1.414*math.max(math.abs(data));
+    //         gt.init(ndim);
+
+    //         points = gt.project(data, t);
+    //         colors = labels.map(d=>baseColors[d]);
+    //         colors = colors.concat(createAxisColors(ndim));
+    //         welgl_init();
+    // });
     
-    Promise.all([p1,p2])
-    .then(function(data_and_labels){
-        console.log('preprocessing data...');
 
-        data = data_and_labels[0];
-        labels = data_and_labels[1];
 
-        data = d3.dsvFormat(',').parseRows(data);
-        data = data.map(row=>{
-            return preprocess(row);
-        });
-        var ndim = data[0].length;
-        data = data.concat(createAxisPoints(ndim));
+    loadData(fn, 'bin',
+        function(buffer, url, i){
+            // let fn_json = changeSuffx(url, 'json');
 
-        labels = d3.dsvFormat(',').parseRows(labels);
-        labels = labels.map(function(row){
-            return +row[0];
-        });
+            //// load a json with 'shape':[1000, ndim]
+            let fn_json = url.split('_');
+            fn_json = fn_json.slice(0,fn_json.length-1).join('_') + '.json';
 
-        dmax = 1.414*math.max(math.abs(data));
+            loadData(fn_json, 'json', (jsonObj)=>{
+                data = reshape(new Float32Array(buffer), jsonObj.shape);
+                npoint = jsonObj.shape[0];
+                dmax = 1.414*math.max(math.abs(data)); 
+                ndim = data[0].length;
+                data = data.concat(createAxisPoints(ndim));
 
-        gt.init(ndim);
+                gt.init(ndim);
+                points = gt.project(data, t);
+                if(ndim){
+                    colors = colors.concat(createAxisColors(ndim));
+                }
+                if(points && colors){
+                    welgl_init();
+                }
+        
+            });
+        }
+    );
 
-        points = gt.project(data, t);
-        colors = labels.map(d=>baseColors[d]);
-        colors = colors.concat(createAxisColors(ndim));
-        welgl_init();
-    });    
+    loadData(fn_labels, 'bin', 
+        function(buffer, url, i){
+            labels = Array.from(new Uint8Array(buffer));
+            colors = labels.map(d=>baseColors[d]);
+            if(ndim){
+                colors = colors.concat(createAxisColors(ndim));
+            }
+            if(points && colors){
+                welgl_init();
+            }
+        }
+    );
+
+
 };
 
 
@@ -222,7 +337,7 @@ function render(){
             gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
             rotateAngles.x += 0;
-            rotateAngles.y += 3.0;
+            rotateAngles.y += 0.0;
             rotateAngles.z += 0;
             ctm = getCtm();
             gl.uniformMatrix4fv(modelViewMatrixLoc, false , flatten(ctm));
@@ -232,14 +347,16 @@ function render(){
             gl.bufferData( gl.ARRAY_BUFFER, flatten(points), gl.STATIC_DRAW );
 
             var ndim = data[0].length;
-            gl.drawArrays( gl.POINTS, 0, points.length-ndim*2 );
-            
+
+            // gl.drawArrays( gl.LINES, 0, points.length-ndim*2 );
+            gl.drawArrays( gl.POINTS, 0, npoint );
+
             // draw axis lines
             // gl.drawArrays( gl.POINTS, points.length-ndim*2, ndim*2);
-            gl.drawArrays( gl.LINES, points.length-ndim*2, ndim*2);
+            gl.drawArrays( gl.LINES, npoint, ndim*2);
         }
         requestAnimFrame(render);
-    }, 1000/120);
+    }, 1000/60);
     
     // shouldAnimate = false;
 }
