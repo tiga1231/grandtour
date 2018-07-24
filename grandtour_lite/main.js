@@ -1,7 +1,5 @@
-"use strict";
-
 var canvas;
-var gl;
+var gl, program;
 
 var baseColors;
 
@@ -10,23 +8,26 @@ var ctm;
 var rotateAngles;
 var modelViewMatrixLoc;
 
-var data, labels;
+var dataTensor, data, labels;
 var points, colors;
-var dmax;
 var t = 0;
-var ndim;
-var npoint;
 
-// var layer = 'fc3';
-// var modelid = 1;
-var epoch = 99;
-// var fn = constructFileName(modelid, layer, epoch);
+var dmax = 5;
+var ndim;//ndim = 5;
+var npoint = 178;
+var nepoch = 1;
 
-// var fn = 'data/activation_softmax_epoch300.csv';
-var fn = 'data/cifar10_pred/activation_softmax_epoch99.bin';
-// var fn = 'data/activation_conv2_epoch300.csv';
 
-var fn_labels = 'data/cifar10_pred/labels.bin';
+var fn, fn_labels, fn_colors;
+
+
+fn =  'data.bin';
+fn_labels = 'labels.bin';
+// fn_colors = 'colors.bin';
+
+// var fn_json = 'projected.json';
+
+var epoch = 0;
 var shouldAnimate = true;
 
 function constructFileName(modelid, layer, epoch){
@@ -35,22 +36,15 @@ function constructFileName(modelid, layer, epoch){
 }
 
 
-function setEpoch(epoch){
-    let url = constructFileName('','',epoch);
-    loadData(url, 'bin', function(buffer, url, i){
-        let fn_json = url.split('_');
-            fn_json = fn_json.slice(0,fn_json.length-1).join('_') + '.json';
+function setEpoch(e){
+    epoch = e;
+    data = dataTensor[epoch];
+    data = data.concat(createAxisPoints(ndim));
 
-        loadData(fn_json, 'json', (jsonObj)=>{
-            data = reshape(new Float32Array(buffer), jsonObj.shape);
-            data = data.concat(createAxisPoints(ndim));
-            points = gt.project(data, t);
-        });
-    });
 }
 
 function nextEpoch(){
-    epoch = (epoch+1)%100;
+    epoch = (epoch+1)%nepoch;
     setEpoch(epoch);
 }
 
@@ -91,6 +85,7 @@ function pauseOrPlay(){
         bAnimationControl.innerText = 'Pause';
     }else{
         bAnimationControl.innerText = 'Play';
+        console.log(gt.getMatrix(t));
     }
 }
 
@@ -147,12 +142,16 @@ function loadData(urls, mode, callback){
 
 
 function updateDmax(){
-    dmax = 1.414*math.max(math.abs(data));
+    dmax = math.max(math.abs(data));
 }
 
 
-function createAxisPoints(ndim){
-    var res = math.eye(ndim)._data;
+function createAxisPoints(ndim, r){
+    if(r===undefined){
+        r = 1;
+    }
+
+    var res = math.multiply(math.eye(ndim), r)._data;
     for(var i=ndim-1; i>=0; i--){
         res.splice(i, 0, math.zeros(ndim)._data);
     }
@@ -173,15 +172,25 @@ function changeSuffx(fn, newSuffix){
     return newFn;
 }
 
+
 function reshape(array, shape){
-    var res = [];
+  var res = [];
+  if(shape.length == 2){
     for(let row=0; row<shape[0]; row++){
-        res.push([]);
-        for(let col=0; col<shape[1]; col++){
-            res[res.length-1].push(array[shape[1] * row + col]);
-        }
+      res.push([]);
+      for(let col=0; col<shape[1]; col++){
+        res[res.length-1].push(array[shape[1] * row + col]);
+      }
     }
-    return res;
+  }else{
+    let blocksize = math.prod(shape.slice(1));
+    for(let i=0; i<shape[0]; i++){
+      res.push(
+        reshape(array.slice(i*blocksize,(i+1)*blocksize),  shape.slice(1))
+      );
+    }
+  }
+  return res;
 }
 
 
@@ -198,73 +207,80 @@ window.onload = function main(){
     rotateAngles = {x:0, y:0, z:0};
     ctm = getCtm();
 
-    // loadData([fn, fn_labels], 'text',
-    //     function(data_and_labels){
-    //         data = data_and_labels[0];
-    //         labels = data_and_labels[1];
-    //         data = d3.dsvFormat(',').parseRows(data);
-    //         data = data.map(row=>{
-    //             return preprocess(row);
-    //         });
-    //         var ndim = data[0].length;
-    //         data = data.concat(createAxisPoints(ndim));
-
-    //         labels = d3.dsvFormat(',').parseRows(labels);
-    //         labels = labels.map(function(row){
-    //             return +row[0];
-    //         });
-
-    //         dmax = 1.414*math.max(math.abs(data));
-    //         gt.init(ndim);
-
-    //         points = gt.project(data, t);
-    //         colors = labels.map(d=>baseColors[d]);
-    //         colors = colors.concat(createAxisColors(ndim));
-    //         welgl_init();
-    // });
-    
-
-
     loadData(fn, 'bin',
         function(buffer, url, i){
             // let fn_json = changeSuffx(url, 'json');
 
             //// load a json with 'shape':[1000, ndim]
-            let fn_json = url.split('_');
-            fn_json = fn_json.slice(0,fn_json.length-1).join('_') + '.json';
 
-            loadData(fn_json, 'json', (jsonObj)=>{
-                data = reshape(new Float32Array(buffer), jsonObj.shape);
-                npoint = jsonObj.shape[0];
-                dmax = 1.414*math.max(math.abs(data)); 
-                ndim = data[0].length;
-                data = data.concat(createAxisPoints(ndim));
+            // loadData(fn_json, 'json', (jsonObj)=>{
+            // let array = new Float64Array(buffer);
+            let array = new Float32Array(buffer);
 
-                gt.init(ndim);
-                points = gt.project(data, t);
-                if(ndim){
-                    colors = colors.concat(createAxisColors(ndim));
-                }
-                if(points && colors){
-                    welgl_init();
-                }
-        
-            });
-        }
-    );
+            if (ndim===undefined){
+                ndim = Math.floor(array.length/npoint/nepoch);
+            }
+            let shape = [nepoch, npoint, ndim];
+            dataTensor = reshape(array, shape);
+            data = dataTensor[epoch];
+            if(dmax===undefined){
+                dmax = math.max(math.abs(data[data.length-1])); 
+            }
+            data = data.concat(createAxisPoints(ndim));
 
-    loadData(fn_labels, 'bin', 
-        function(buffer, url, i){
-            labels = Array.from(new Uint8Array(buffer));
-            colors = labels.map(d=>baseColors[d]);
+            gt.init(ndim);
+            points = gt.project(data, t);
             if(ndim){
                 colors = colors.concat(createAxisColors(ndim));
             }
             if(points && colors){
                 welgl_init();
             }
+        
+            // });
         }
     );
+
+    if(fn_labels !== undefined){
+        loadData(fn_labels, 'bin', 
+            function(buffer, url, i){
+                labels = Array.from(new Uint8Array(buffer));
+                // labels = labels.map(d=>d==9?2:1);
+
+                colors = labels.map(d=>baseColors[d]);
+                if(ndim){
+                    colors = colors.concat(createAxisColors(ndim));
+                }
+                if(points && colors){
+                    welgl_init();
+                }
+            }
+        );
+    }else if(fn_colors !== undefined){
+        loadData(fn_colors, 'bin', 
+            function(buffer, url, i){
+                colors = Array.from(new Uint8Array(buffer));
+                colors = reshape(colors, [npoint, 3]);
+                colors = math.divide(colors, 255);
+                if(ndim){
+                    colors = colors.concat(createAxisColors(ndim));
+                }
+                if(points && colors){
+                    welgl_init();
+                }
+            }
+        );
+    }
+    else{
+        labels = d3.range(npoint).map((d,i)=>i>=npoint/2?0:0);
+        colors = labels.map(d=>baseColors[d]);
+        if(ndim){
+            colors = colors.concat(createAxisColors(ndim));
+        }
+        if(points && colors){
+            welgl_init();
+        }
+    }
 
 
 };
@@ -297,7 +313,7 @@ function welgl_init() {
     gl.clearColor( 0.2, 0.2, 0.2, 1.0 );
     gl.enable(gl.DEPTH_TEST);
 
-    var program = initShaders( gl, "vertex-shader", "fragment-shader" );
+    program = initShaders( gl, "vertex-shader", "fragment-shader" );
     gl.useProgram( program );
 
     //------------------------------
@@ -326,37 +342,39 @@ function welgl_init() {
     modelViewMatrixLoc = gl.getUniformLocation(program, 'modelViewMatrix');
     gl.uniformMatrix4fv(modelViewMatrixLoc, false , flatten(ctm));
 
-    render();
+    render(0);
 };
 
+let then = 0;
+function render(now){
+    delta = now-then;
+    then = now;
 
-function render(){
-    console.log('rendering...');
-    setTimeout( function(){
-        if(shouldAnimate){
-            gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    if(shouldAnimate){
+        gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-            rotateAngles.x += 0;
-            rotateAngles.y += 0.0;
-            rotateAngles.z += 0;
-            ctm = getCtm();
-            gl.uniformMatrix4fv(modelViewMatrixLoc, false , flatten(ctm));
+        rotateAngles.x += 0;
+        rotateAngles.y += 0.0;
+        rotateAngles.z += 0;
+        ctm = getCtm();
+        gl.uniformMatrix4fv(modelViewMatrixLoc, false , flatten(ctm));
 
-            t+=1;
-            points = gt.project(data, t);
-            gl.bufferData( gl.ARRAY_BUFFER, flatten(points), gl.STATIC_DRAW );
+        t+=delta*0.1;
+        points = gt.project(data, t);
+        gl.bufferData( gl.ARRAY_BUFFER, flatten(points), gl.STATIC_DRAW );
+        var ndim = data[0].length;
+        // gl.drawArrays( gl.LINES, 0, points.length-ndim*2 );
+        
+        var vPosition = gl.getAttribLocation( program, "vPosition" );
+        gl.vertexAttribPointer( vPosition, 3, gl.FLOAT, false, 0, 0 );
+        gl.drawArrays( gl.POINTS, 0, npoint );
 
-            var ndim = data[0].length;
-
-            // gl.drawArrays( gl.LINES, 0, points.length-ndim*2 );
-            gl.drawArrays( gl.POINTS, 0, npoint );
-
-            // draw axis lines
-            // gl.drawArrays( gl.POINTS, points.length-ndim*2, ndim*2);
-            gl.drawArrays( gl.LINES, npoint, ndim*2);
-        }
-        requestAnimFrame(render);
-    }, 1000/60);
+        // draw axis lines
+        // gl.drawArrays( gl.POINTS, points.length-ndim*2, ndim*2);
+        gl.vertexAttribPointer( vPosition, 3, gl.FLOAT, false, 0, 0 );
+        gl.drawArrays( gl.LINES, npoint, ndim*2);
+    }
+    requestAnimFrame(render);
     
     // shouldAnimate = false;
 }

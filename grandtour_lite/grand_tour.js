@@ -1,15 +1,13 @@
 var gt = {};
 
 
-
-
 gt.init = function(ndim, stepsize){
   this.ndim = ndim;
   this.N = ndim*ndim;
   if (stepsize !== undefined){
     this.STEPSIZE = stepsize;
   }else{
-    this.STEPSIZE = Math.PI * Math.PI / 500 / ndim;
+    this.STEPSIZE = Math.PI * Math.PI / 2000 / ndim;
   }
 
   this.initThetas(this.N);
@@ -61,6 +59,7 @@ gt.multiplyRotationMatrix = function(matrix, i,j, theta){
 
 
 gt.getMatrix = function(t){
+
   var angles = this.thetas.map(theta=>t*theta*this.STEPSIZE);
   
   var matrix = math.eye(this.ndim)._data;
@@ -85,6 +84,8 @@ gt.getMatrix = function(t){
   }
   matrix = math.transpose(matrix);
   matrix = matrix.slice(0,3);
+  // matrix[0]=[1,0,0,0];
+  // matrix[2]=[0,1,0,0];
   matrix = math.transpose(matrix);
   return matrix;
 }
