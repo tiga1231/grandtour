@@ -12,9 +12,9 @@ var dataTensor, data, labels;
 var points, colors;
 var t = 0;
 
-var dmax = 5;
+var dmax = 10;
 var ndim;//ndim = 5;
-var npoint = 178;
+var npoint = 150;
 var nepoch = 1;
 
 
