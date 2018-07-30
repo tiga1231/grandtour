@@ -71,7 +71,13 @@ utils.reshape = function(array, shape){
 
 
 utils.flatten = function(matrix){
-  return matrix.reduce((a,b)=>a.concat(b), []);
+  let res = [];
+  for(let i=0; i<matrix.length; i++){
+    for(let j=0; j<matrix[0].length; j++){
+      res.push(matrix[i][j]);
+    }
+  }
+  return res;
 };
 
 
