@@ -2,8 +2,7 @@ function GrandTour(ndim){
 
   this.ndim = ndim;
   this.N = ndim*ndim;
-  this.STEPSIZE = 0.0001 * Math.log(this.ndim);
-
+  this.STEPSIZE = 0.00007;
 
   this.initThetas = function(N){
     this.thetas = new Array(N);

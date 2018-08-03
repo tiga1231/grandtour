@@ -102,11 +102,13 @@ utils.orthogonalize = function(matrix, priorityRow){
   function normalize(v){
     return numeric.div(v, numeric.norm2(v) );
   }
+
   matrix[priorityRow] = normalize(matrix[priorityRow]);
   for(let i=0; i<matrix.length; i++){
     if(i==priorityRow){
       continue;
     }else{
+      // Gram–Schmidt orthogonalization
       matrix[i] = numeric.sub(matrix[i], proj(matrix[priorityRow], matrix[i]));
       for(let j=0; j<i; j++){
         matrix[i] = numeric.sub(matrix[i], proj(matrix[j], matrix[i]));

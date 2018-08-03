@@ -5,27 +5,29 @@ let data, labels, colors;
 let npoint, ndim, dmax, axisLength;
 let fn, fn_labels, fn_colors;
 let nepoch = 1;
-let epoch;
+let epoch = 0;
 
 // fn = 'data/klein_bottle/data.bin';
 // fn_colors = 'data/klein_bottle/colors.bin';
 // npoint = 100*60;
+// ndim = 4;
 
 // fn = 'data/rp2/data.bin';
 // npoint = 10000;
 
-fn = 'data/mnist5000_30/fc2.bin';
-// fn = 'data/mnist5000_30/softmax.bin';
+// fn = 'data/mnist5000_30/fc2.bin';
+fn = 'data/mnist5000_30/softmax.bin';
 fn_labels = 'data/mnist5000_30/labels.bin';
 npoint = 5000;
+ndim = 10;
 nepoch = 30;
 epoch = nepoch-1;
 
-fn = 'data/mnist/softmax.bin';
-fn_labels = 'data/mnist/labels.bin';
-npoint = 1000;
-nepoch = 1;
-epoch = nepoch-1;
+// fn = 'data/mnist/softmax.bin';
+// fn_labels = 'data/mnist/labels.bin';
+// ndim = 10;
+// npoint = 1000;
+
 
 // fn = 'data/iris/data.bin';
 // fn_labels = 'data/iris/labels.bin';
@@ -49,6 +51,9 @@ window.onkeypress = function(){
     }else if(event.key == 'n'){
       epoch = (epoch + 1)%nepoch;
       data = dataTensor[epoch];
+    }else if(event.key == 'p'){
+      epoch = (epoch - 1) % nepoch;
+      data = dataTensor[epoch];
     }
 };
 
@@ -61,10 +66,6 @@ window.onload = function(){
 
   utils.loadDataBin(fn, (buffer, url)=>{
     let array = new Float32Array(buffer);
-    if(ndim === undefined){
-      ndim = Math.floor( array.length / npoint / nepoch);
-      
-    }
     dataTensor = utils.reshape(array, [nepoch, npoint, ndim]);
     data = dataTensor[nepoch-1];
     dmax = math.max(data);

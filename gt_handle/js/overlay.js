@@ -20,6 +20,12 @@ overlay.init = function(){
   this.svg = svg;
 
   this.drawAxes();
+
+  svg.append('text')
+  .attr('x', 10)
+  .attr('y', 20)
+  .attr('fill', 'white')
+  .text("'f': faster, 's': slower, 'n': next epoch, 'p': prev epoch, 'space': pause, drag white bubble to change view")
   return svg;
 };
 
@@ -48,20 +54,21 @@ overlay.drawAxes = function(){
   .enter()
   .append('circle')
   .attr('class', 'anchor')
-  .attr('opacity', 0.1);
+  .attr('opacity', 0.3);
 
 
-  let archorRadius = 8;
+  let archorRadius = 10;
   let anchors = svg.selectAll('.anchor')
   .attr('cx', d=>svg.sx(d[0]))
   .attr('cy', d=>svg.sy(d[1]))
   .attr('r', archorRadius)
-  .attr('fill', (_,i)=>svg.sc(i/ndim/2))
+  .attr('fill', (_,i)=>'black')
   .attr('stroke', (_,i)=>'white')
   .style('cursor', 'pointer');
 
   svg.drag = d3.drag()
   .on('start', function(){
+    gt.shouldPlayPrev = gt.shouldPlay;
     gt.shouldPlay = false;
   })
   .on('drag', function(d,i){
@@ -79,15 +86,16 @@ overlay.drawAxes = function(){
     overlay.redrawAxis();
   })
   .on('end', function(){
-    gt.shouldPlay = true;
+    gt.shouldPlay = gt.shouldPlayPrev;
   });
   anchors
   .on('mouseover', (_,i)=>{
-    gt.STEPSIZE_ORIG = gt.STEPSIZE;
+    gt.STEPSIZE_PREV = gt.STEPSIZE;
     gt.STEPSIZE = gt.STEPSIZE * 0.2;
   })
   .on('mouseout', (_,i)=>{
-    gt.STEPSIZE = gt.STEPSIZE_ORIG;
+    gt.STEPSIZE = gt.STEPSIZE_PREV;
+    gt.STEPSIZE_PREV = undefined;
   })
   .call(svg.drag);
 };
