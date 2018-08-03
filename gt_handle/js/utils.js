@@ -2,22 +2,22 @@ var utils = {};
 
 utils.CLEAR_COLOR = [0.2,0.2,0.2];
 
-utils.baseColors = [
-  [166,206,227], [31,120,180],  [178,223,138],
-  [51,160,44],   [251,154,153], [227,26,28],
-  [253,191,111], [255,127,0],   [202,178,214],
-  [106,61,154],  [255,255,153], [177,89,40]
-];
-// function hexToRgb(hex) {
-//   var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-//   return [
-//     parseInt(result[1], 16),
-//     parseInt(result[2], 16),
-//     parseInt(result[3], 16)
-//   ];
-// }
-// utils.baseColors = d3.schemeCategory10;
-// utils.baseColors = utils.baseColors.map(d=>(hexToRgb(d)));
+// utils.baseColors = [
+//   [166,206,227], [31,120,180],  [178,223,138],
+//   [51,160,44],   [251,154,153], [227,26,28],
+//   [253,191,111], [255,127,0],   [202,178,214],
+//   [106,61,154],  [255,255,153], [177,89,40]
+// ];
+function hexToRgb(hex) {
+  var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return [
+    parseInt(result[1], 16),
+    parseInt(result[2], 16),
+    parseInt(result[3], 16)
+  ];
+}
+utils.baseColors = d3.schemeCategory10;
+utils.baseColors = utils.baseColors.map(d=>(hexToRgb(d)));
 
 
 utils.loadDataBin = function(url, callback){
@@ -96,29 +96,28 @@ utils.makeMeshindices = function(nrow, ncol){
 
 
 utils.orthogonalize = function(matrix, priorityRow){
+  // make row vectors in matrix pairwise orthogonal;
+  
   function proj(u, v){
     return numeric.mul(numeric.dot(u, v)/numeric.dot(v,v), u);
   }
-  function normalize(v){
-    return numeric.div(v, numeric.norm2(v) );
-  }
 
-  matrix[priorityRow] = normalize(matrix[priorityRow]);
-  for(let i=0; i<matrix.length; i++){
-    if(i==priorityRow){
-      continue;
+  function normalize(v, unitlength=1){
+    if(numeric.norm2(v) <= 0){
+      return v;
     }else{
-      // Gram–Schmidt orthogonalization
-      matrix[i] = numeric.sub(matrix[i], proj(matrix[priorityRow], matrix[i]));
-      for(let j=0; j<i; j++){
-        matrix[i] = numeric.sub(matrix[i], proj(matrix[j], matrix[i]));
-      }
+      return numeric.div(v, numeric.norm2(v)/unitlength);
+    }
+  }
+  
+
+  // Gram–Schmidt orthogonalization
+  for(let i=0; i<matrix.length; i++){
+    for(let j=0; j<i; j++){
+      matrix[i] = numeric.sub(matrix[i], proj(matrix[j], matrix[i]));
     }
     matrix[i] = normalize(matrix[i]);
   }
+  
   return matrix;
-
-
-  // make row vector in matrix pairwise orthogonal;
-  // 
-}
+};

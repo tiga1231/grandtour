@@ -6,41 +6,57 @@ let npoint, ndim, dmax, axisLength;
 let fn, fn_labels, fn_colors;
 let nepoch = 1;
 let epoch = 0;
+let getMeshIndices = undefined;
+let DATA_BOUND_HORIZONTAL = 2;
 
-fn = 'data/klein_bottle/data.bin';
-fn_colors = 'data/klein_bottle/colors.bin';
-npoint = 100*60;
-ndim = 4;
-function getMeshIndices(){
-  return utils.makeMeshindices(60,100);
-}
+
+// fn = 'data/digits/data.bin';
+// fn_labels = 'data/digits/labels.bin';
+// npoint = 1797;
+// ndim = 64;
+
+
+// fn = 'data/klein_bottle/data.bin';
+// // fn_colors = 'data/klein_bottle/colors.bin';
+// npoint = 100*60;
+// ndim = 4;
+// getMeshIndices = function(){
+//   return utils.makeMeshindices(60,100);
+// }
 
 // fn = 'data/rp2/data.bin';
 // npoint = 10000;
 // ndim = 4;
-// function getMeshIndices(){
+// getMeshIndices = function(){
 //   return utils.makeMeshindices(100,100);
 // }
 
 // fn = 'data/mnist5000_30/fc2.bin';
-// fn = 'data/mnist5000_30/softmax.bin'; //a (flattened) 3D tensor (float32) indexed by [epoch, example, dimension];
+// // fn = 'data/mnist5000_30/softmax.bin'; //a (flattened) 3D tensor (float32) indexed by [epoch, example, dimension];
 // fn_labels = 'data/mnist5000_30/labels.bin'; //an  array (uint8) of integers;
 // npoint = 5000;
 // ndim = 10;
 // nepoch = 30;
 // epoch = nepoch-1;
 
+fn = 'data/fashion-mnist/softmax.bin';
+fn_labels = 'data/fashion-mnist/labels.bin'; //an  array (uint8) of integers;
+npoint = 5000;
+ndim = 10;
+nepoch = 101;
 
 // fn = 'data/tesseract/data.bin';
 // npoint = 16;
 // ndim = 4;
-// function getMeshIndices(){
+// dmax = 1;
+// DATA_BOUND_HORIZONTAL = 4;
+// getMeshIndices = function(){
 //   return [
 //   0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
 //   0,2,2,6,6,4,4,0, 8,10,10,14,14,12,12,8, 0,8,2,10,6,14,4,12,
 //   1,3,3,7,7,5,5,1, 9,11,11,15,15,13,13,9, 1,9,3,11,7,15,5,13
 //   ];
-// }
+// };
 
 
 // fn = 'data/iris/data.bin';
@@ -67,7 +83,7 @@ window.onkeypress = function(){
       epoch = (epoch + 1)%nepoch;
       data = dataTensor[epoch];
     }else if(event.key == 'p'){
-      epoch = (epoch - 1) % nepoch;
+      epoch = epoch==0? nepoch-1 : epoch-1;
       data = dataTensor[epoch];
     }
 };
@@ -88,8 +104,9 @@ window.onload = function(){
     // let min = math.min(data, 0);
     // let std = math.transpose(data).map(col => math.std(col));
     // data = data.map(row=>row.map((d,i)=> (d-min[i])/std[i] ));
-
-    dmax = math.max(data);
+    if(dmax === undefined){
+      dmax = math.max(data);
+    }
     // axisLength = math.max(data);
     updateModelViewMatrix(dmax);
 
@@ -140,7 +157,7 @@ window.onload = function(){
 
 
 function initGL(){
-  colors = d3.range(npoint).map(d=>utils.baseColors[0]); //color placeholder
+  colors = d3.range(npoint).map(d=>[120, 150, 255]); //color placeholder
   colors = colors.concat(createAxisColors(100));
 
   data = numeric.random([npoint, ndim]); //data placeholder
@@ -162,7 +179,7 @@ function initGL(){
   // let zNear = 0.1;
   // let zFar = 100.0;
   // mat4.perspective(projectionMatrix, fov, aspect, zNear, zFar);
-  let left = -2;
+  let left = -DATA_BOUND_HORIZONTAL;
   let right = -left;
   let bottom = left / aspect;
   let top = -bottom;

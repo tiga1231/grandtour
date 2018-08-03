@@ -5,7 +5,8 @@ overlay.init = function(){
   let width = +svg.attr('width');
   let height = +svg.attr('height');
 
-  let xmax = 2;
+
+  let xmax = DATA_BOUND_HORIZONTAL;
   let aspect = width/height;
 
   svg.sx = d3.scaleLinear()
@@ -75,14 +76,17 @@ overlay.drawAxes = function(){
 
     let dx = svg.sx.invert(d3.event.dx)-svg.sx.invert(0);
     let dy = svg.sy.invert(d3.event.dy)-svg.sy.invert(0);
-    // let inv = gt.getMatrixInverse();
+    let x = svg.sx.invert(d3.event.x);
+    let y = svg.sy.invert(d3.event.y);
     let matrix = gt.getMatrix();
+
     matrix[i][0] += dx;
     matrix[i][1] += dy;
+    // matrix[i][0] = x;
+    // matrix[i][1] = y;
+    // 
     gt.setMatrix(utils.orthogonalize(matrix, i));
-    // let d1 = numeric.mul(inv[0], dx);
-    // let d2 = numeric.mul(inv[1], dy);
-    // m[i] = numeric.add(numeric.add(m[i], d1), d2);
+
     overlay.redrawAxis();
   })
   .on('end', function(){
