@@ -16,8 +16,8 @@ let epoch = 0;
 // npoint = 10000;
 
 // fn = 'data/mnist5000_30/fc2.bin';
-fn = 'data/mnist5000_30/softmax.bin';
-fn_labels = 'data/mnist5000_30/labels.bin';
+fn = 'data/mnist5000_30/softmax.bin'; //a (flattened) 3D tensor (float32) indexed by [epoch, example, dimension];
+fn_labels = 'data/mnist5000_30/labels.bin'; //an  array (uint8) of integers;
 npoint = 5000;
 ndim = 10;
 nepoch = 30;
