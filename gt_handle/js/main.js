@@ -7,31 +7,46 @@ let fn, fn_labels, fn_colors;
 let nepoch = 1;
 let epoch = 0;
 
-// fn = 'data/klein_bottle/data.bin';
-// fn_colors = 'data/klein_bottle/colors.bin';
-// npoint = 100*60;
-// ndim = 4;
+fn = 'data/klein_bottle/data.bin';
+fn_colors = 'data/klein_bottle/colors.bin';
+npoint = 100*60;
+ndim = 4;
+function getMeshIndices(){
+  return utils.makeMeshindices(60,100);
+}
 
 // fn = 'data/rp2/data.bin';
 // npoint = 10000;
+// ndim = 4;
+// function getMeshIndices(){
+//   return utils.makeMeshindices(100,100);
+// }
 
 // fn = 'data/mnist5000_30/fc2.bin';
-fn = 'data/mnist5000_30/softmax.bin'; //a (flattened) 3D tensor (float32) indexed by [epoch, example, dimension];
-fn_labels = 'data/mnist5000_30/labels.bin'; //an  array (uint8) of integers;
-npoint = 5000;
-ndim = 10;
-nepoch = 30;
-epoch = nepoch-1;
-
-// fn = 'data/mnist/softmax.bin';
-// fn_labels = 'data/mnist/labels.bin';
+// fn = 'data/mnist5000_30/softmax.bin'; //a (flattened) 3D tensor (float32) indexed by [epoch, example, dimension];
+// fn_labels = 'data/mnist5000_30/labels.bin'; //an  array (uint8) of integers;
+// npoint = 5000;
 // ndim = 10;
-// npoint = 1000;
+// nepoch = 30;
+// epoch = nepoch-1;
+
+
+// fn = 'data/tesseract/data.bin';
+// npoint = 16;
+// ndim = 4;
+// function getMeshIndices(){
+//   return [
+//   0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+//   0,2,2,6,6,4,4,0, 8,10,10,14,14,12,12,8, 0,8,2,10,6,14,4,12,
+//   1,3,3,7,7,5,5,1, 9,11,11,15,15,13,13,9, 1,9,3,11,7,15,5,13
+//   ];
+// }
 
 
 // fn = 'data/iris/data.bin';
 // fn_labels = 'data/iris/labels.bin';
 // npoint = 150;
+// ndim=4;
 
 // fn_labels = 'data/wine/labels.bin';
 // fn = 'data/wine/data.bin';
@@ -68,6 +83,12 @@ window.onload = function(){
     let array = new Float32Array(buffer);
     dataTensor = utils.reshape(array, [nepoch, npoint, ndim]);
     data = dataTensor[nepoch-1];
+
+    // //normalize data
+    // let min = math.min(data, 0);
+    // let std = math.transpose(data).map(col => math.std(col));
+    // data = data.map(row=>row.map((d,i)=> (d-min[i])/std[i] ));
+
     dmax = math.max(data);
     // axisLength = math.max(data);
     updateModelViewMatrix(dmax);
@@ -165,8 +186,13 @@ function initGL(){
 
   let indexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-  // gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(utils.makeMeshindices(30,30)), gl.STATIC_DRAW);
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(d3.range(npoint+2*ndim)), gl.STATIC_DRAW);
+  if(getMeshIndices !== undefined){
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(getMeshIndices()), gl.STATIC_DRAW);  
+    // gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(utils.makeMeshindices(60,100)), gl.STATIC_DRAW);
+  }else{
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(d3.range(npoint+2*ndim)), gl.STATIC_DRAW);
+  }
+
 
   gl.uniformMatrix4fv(program.modelViewMatrixLoc, false, program.modelViewMatrix);
   gl.uniformMatrix4fv(program.projectionMatrixLoc, false, program.projectionMatrix);
@@ -225,14 +251,17 @@ function render(now){
   gl.bindBuffer(gl.ARRAY_BUFFER, program.positionBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(utils.flatten(d)), gl.STATIC_DRAW);
 
-  gl.drawArrays(gl.POINTS, 0, npoint);
-  gl.drawArrays(gl.LINES, npoint, ndim*2);
-  // 
-  // gl.drawElements(gl.POINTS, npoint, gl.UNSIGNED_SHORT, 0);
-  // gl.drawElements(gl.LINES, ndim*2, gl.UNSIGNED_SHORT, npoint*2);
+  
+  if(getMeshIndices !== undefined){
+    gl.drawElements(gl.LINE_STRIP, getMeshIndices().length, gl.UNSIGNED_SHORT, 0);
+    gl.drawElements(gl.LINES, ndim*2, gl.UNSIGNED_SHORT, npoint*2);
+  }else{
+    gl.drawArrays(gl.POINTS, 0, npoint);
+    gl.drawArrays(gl.LINES, npoint, ndim*2);
+  }
 
-  // gl.drawElements(gl.LINE_STRIP, 3364, gl.UNSIGNED_SHORT, 0);
-  // gl.drawElements(gl.LINES, ndim*2, gl.UNSIGNED_SHORT, 3364);
+  // gl.drawElements(gl.LINE_STRIP, 23364, gl.UNSIGNED_SHORT, 0);
+  // gl.drawElements(gl.LINES, ndim*2, gl.UNSIGNED_SHORT, 23364);
 
   overlay.redrawAxis(t);
   requestAnimationFrame(render);

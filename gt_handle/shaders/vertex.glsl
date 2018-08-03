@@ -7,7 +7,7 @@ uniform mat4 uProjectionMatrix;
 varying lowp vec4 vColor;
 
 void main(){
-  gl_PointSize = 4.0;
+  gl_PointSize = 3.0;
   gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
   vColor = aColor;
 }
