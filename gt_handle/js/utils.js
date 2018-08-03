@@ -92,4 +92,31 @@ utils.makeMeshindices = function(nrow, ncol){
     }
   }
   return res;
+};
+
+
+utils.orthogonalize = function(matrix, priorityRow){
+  function proj(u, v){
+    return numeric.mul(numeric.dot(u, v)/numeric.dot(v,v), u);
+  }
+  function normalize(v){
+    return numeric.div(v, numeric.norm2(v) );
+  }
+  matrix[priorityRow] = normalize(matrix[priorityRow]);
+  for(let i=0; i<matrix.length; i++){
+    if(i==priorityRow){
+      continue;
+    }else{
+      matrix[i] = numeric.sub(matrix[i], proj(matrix[priorityRow], matrix[i]));
+      for(let j=0; j<i; j++){
+        matrix[i] = numeric.sub(matrix[i], proj(matrix[j], matrix[i]));
+      }
+    }
+    matrix[i] = normalize(matrix[i]);
+  }
+  return matrix;
+
+
+  // make row vector in matrix pairwise orthogonal;
+  // 
 }

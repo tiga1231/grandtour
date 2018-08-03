@@ -19,17 +19,14 @@ overlay.init = function(){
   svg.sc = d3.interpolateGreys;
   this.svg = svg;
 
-  this.drawAxes(m.map(d=>d.slice(0,2)));
+  this.drawAxes();
   return svg;
 };
 
 
-overlay.drawAxes = function(coordinates){
+overlay.drawAxes = function(){
   let svg = this.svg;
-  for(let i=0; i<coordinates.length; i++){
-    m[i][0] = coordinates[i][0];
-    m[i][1] = coordinates[i][1];
-  }
+  let coordinates = math.eye(ndim)._data;
 
   svg.selectAll('.basis')
   .data(coordinates)
@@ -42,7 +39,7 @@ overlay.drawAxes = function(coordinates){
   .attr('y1', d=>svg.sy(0))
   .attr('x2', d=>svg.sx(d[0]))
   .attr('y2', d=>svg.sy(d[1]))
-  .attr('stroke', (_,i)=>svg.sc(i/indim/2))
+  .attr('stroke', (_,i)=>svg.sc(i/ndim/2))
   .attr('opacity', 0.2);
 
 
@@ -51,7 +48,7 @@ overlay.drawAxes = function(coordinates){
   .enter()
   .append('circle')
   .attr('class', 'anchor')
-  .attr('opacity', 0.2);
+  .attr('opacity', 0.1);
 
 
   let archorRadius = 8;
@@ -59,7 +56,7 @@ overlay.drawAxes = function(coordinates){
   .attr('cx', d=>svg.sx(d[0]))
   .attr('cy', d=>svg.sy(d[1]))
   .attr('r', archorRadius)
-  .attr('fill', (_,i)=>svg.sc(i/indim/2))
+  .attr('fill', (_,i)=>svg.sc(i/ndim/2))
   .attr('stroke', (_,i)=>'white')
   .style('cursor', 'pointer');
 
@@ -71,12 +68,15 @@ overlay.drawAxes = function(coordinates){
 
     let dx = svg.sx.invert(d3.event.dx)-svg.sx.invert(0);
     let dy = svg.sy.invert(d3.event.dy)-svg.sy.invert(0);
-    let inv = gt.getMatrixInverse();
-
-    let d1 = numeric.mul(inv[0], dx);
-    let d2 = numeric.mul(inv[1], dy);
-    m[i] = numeric.add(numeric.add(m[i], d1), d2);
-    overlay.redrawAxis(m);
+    // let inv = gt.getMatrixInverse();
+    let matrix = gt.getMatrix();
+    matrix[i][0] += dx;
+    matrix[i][1] += dy;
+    gt.setMatrix(utils.orthogonalize(matrix, i));
+    // let d1 = numeric.mul(inv[0], dx);
+    // let d2 = numeric.mul(inv[1], dy);
+    // m[i] = numeric.add(numeric.add(m[i], d1), d2);
+    overlay.redrawAxis();
   })
   .on('end', function(){
     gt.shouldPlay = true;
@@ -92,9 +92,9 @@ overlay.drawAxes = function(coordinates){
   .call(svg.drag);
 };
 
-overlay.redrawAxis = function(m){
+overlay.redrawAxis = function(){
   let svg = this.svg;
-  let handlePos = gt.project(m);
+  let handlePos = gt.project(math.eye(ndim)._data);
   svg.selectAll('.basis')
   .attr('x2', (_,i) => svg.sx(handlePos[i][0]))
   .attr('y2', (_,i) => svg.sy(handlePos[i][1]));

@@ -2,7 +2,7 @@ let canvas, program, gl;
 let gt, t, svg;
 let data, labels, colors;
 
-let npoint, indim, outdim, dmax, axisLength;
+let npoint, ndim, dmax, axisLength;
 let fn, fn_labels, fn_colors;
 let nepoch = 1;
 let epoch;
@@ -10,34 +10,32 @@ let epoch;
 // fn = 'data/klein_bottle/data.bin';
 // fn_colors = 'data/klein_bottle/colors.bin';
 // npoint = 100*60;
-// mshape = [4,4];
 
 // fn = 'data/rp2/data.bin';
 // npoint = 10000;
-// mshape = [4,4];
 
 fn = 'data/mnist5000_30/fc2.bin';
 // fn = 'data/mnist5000_30/softmax.bin';
 fn_labels = 'data/mnist5000_30/labels.bin';
 npoint = 5000;
-mshape = [10,5];
 nepoch = 30;
+epoch = nepoch-1;
+
+fn = 'data/mnist/softmax.bin';
+fn_labels = 'data/mnist/labels.bin';
+npoint = 1000;
+nepoch = 1;
 epoch = nepoch-1;
 
 // fn = 'data/iris/data.bin';
 // fn_labels = 'data/iris/labels.bin';
 // npoint = 150;
-// mshape = [4,4];
 
 // fn_labels = 'data/wine/labels.bin';
 // fn = 'data/wine/data.bin';
 // npoint = 178;
 // ndim = 13;
 
-indim = mshape[0];
-outdim = mshape[1];
-let m = math.eye(mshape);
-// m = d3.range(indim).map(i=>d3.range(outdim).map(j=>Math.random()-0.5));
 
 
 
@@ -56,19 +54,26 @@ window.onkeypress = function(){
 
 
 window.onload = function(){
-  gt = new GrandTour(outdim);
-  gt.shouldPlay = true;
   t = 0;
 
   initGL();
-  svg = overlay.init();
+  
 
   utils.loadDataBin(fn, (buffer, url)=>{
-    dataTensor = utils.reshape(new Float32Array(buffer), [nepoch, npoint, indim]);
+    let array = new Float32Array(buffer);
+    if(ndim === undefined){
+      ndim = Math.floor( array.length / npoint / nepoch);
+      
+    }
+    dataTensor = utils.reshape(array, [nepoch, npoint, ndim]);
     data = dataTensor[nepoch-1];
     dmax = math.max(data);
-    axisLength = math.max(data)/2;
+    // axisLength = math.max(data);
     updateModelViewMatrix(dmax);
+
+    gt = new GrandTour(ndim);
+    gt.shouldPlay = true;
+    svg = overlay.init();
     render(0);
   });
 
@@ -77,27 +82,25 @@ window.onload = function(){
       labels = new Uint8Array(buffer);
       labels = Array.from(labels);
       colors = labels.map(d=>utils.baseColors[d]);
-      colors = colors.concat(createAxisColors(outdim));
+      colors = colors.concat(createAxisColors(ndim));
 
       program.colorBuffer = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, program.colorBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, new Uint8Array(utils.flatten(colors)), gl.STATIC_DRAW);
       gl.vertexAttribPointer(program.colorLoc, 3, gl.UNSIGNED_BYTE, true, 0,0);
       gl.enableVertexAttribArray(program.colorLoc);
-      render(0);
     });
   }else if(fn_colors !== undefined){
     utils.loadDataBin(fn_colors, (buffer, url)=>{
       colors = Array.from(new Uint8Array(buffer));
       colors = utils.reshape(colors, [colors.length/3,3]);
-      colors = colors.concat(createAxisColors(outdim));
+      colors = colors.concat(createAxisColors(ndim));
 
       program.colorBuffer = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, program.colorBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, new Uint8Array(utils.flatten(colors)), gl.STATIC_DRAW);
       gl.vertexAttribPointer(program.colorLoc, 3, gl.UNSIGNED_BYTE, true, 0,0);
       gl.enableVertexAttribArray(program.colorLoc);
-      render(0);
     });
   }
   else{
@@ -106,7 +109,6 @@ window.onload = function(){
     gl.bufferData(gl.ARRAY_BUFFER, new Uint8Array(utils.flatten(colors)), gl.STATIC_DRAW);
     gl.vertexAttribPointer(program.colorLoc, 3, gl.UNSIGNED_BYTE, true, 0,0);
     gl.enableVertexAttribArray(program.colorLoc);
-    render(0);
   }
 };
 
@@ -117,9 +119,9 @@ window.onload = function(){
 
 function initGL(){
   colors = d3.range(npoint).map(d=>utils.baseColors[0]); //color placeholder
-  colors = colors.concat(createAxisColors(outdim));
+  colors = colors.concat(createAxisColors(100));
 
-  data = numeric.random([npoint, indim]); //data placeholder
+  data = numeric.random([npoint, ndim]); //data placeholder
 
   canvas = document.querySelector('#myCanvas');
   gl = canvas.getContext('webgl');
@@ -163,7 +165,7 @@ function initGL(){
   let indexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
   // gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(utils.makeMeshindices(30,30)), gl.STATIC_DRAW);
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(d3.range(npoint+2*outdim)), gl.STATIC_DRAW);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(d3.range(npoint+2*ndim)), gl.STATIC_DRAW);
 
   gl.uniformMatrix4fv(program.modelViewMatrixLoc, false, program.modelViewMatrix);
   gl.uniformMatrix4fv(program.projectionMatrixLoc, false, program.projectionMatrix);
@@ -215,7 +217,7 @@ function render(now){
   // gl.uniformMatrix4fv(program.modelViewMatrixLoc, false, program.modelViewMatrix);
   
   
-  let d = math.multiply(data.slice(0, npoint), m);
+  let d = data.slice(0, npoint);
   d = d.concat(createAxisPoints(d[0].length, axisLength));
   d = gt.project(d, dt);
 
@@ -223,14 +225,15 @@ function render(now){
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(utils.flatten(d)), gl.STATIC_DRAW);
 
   gl.drawArrays(gl.POINTS, 0, npoint);
-  gl.drawArrays(gl.LINES, npoint, outdim*2);
+  gl.drawArrays(gl.LINES, npoint, ndim*2);
+  // 
   // gl.drawElements(gl.POINTS, npoint, gl.UNSIGNED_SHORT, 0);
-  // gl.drawElements(gl.LINES, outdim*2, gl.UNSIGNED_SHORT, npoint*2);
+  // gl.drawElements(gl.LINES, ndim*2, gl.UNSIGNED_SHORT, npoint*2);
 
   // gl.drawElements(gl.LINE_STRIP, 3364, gl.UNSIGNED_SHORT, 0);
-  // gl.drawElements(gl.LINES, outdim*2, gl.UNSIGNED_SHORT, 3364);
+  // gl.drawElements(gl.LINES, ndim*2, gl.UNSIGNED_SHORT, 3364);
 
-  overlay.redrawAxis(m, t);
+  overlay.redrawAxis(t);
   requestAnimationFrame(render);
 
 }
