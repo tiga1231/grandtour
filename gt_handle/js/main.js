@@ -4,7 +4,8 @@ let data, labels, colors;
 
 let npoint, indim, outdim, dmax, axisLength;
 let fn, fn_labels, fn_colors;
-
+let nepoch = 1;
+let epoch;
 
 // fn = 'data/klein_bottle/data.bin';
 // fn_colors = 'data/klein_bottle/colors.bin';
@@ -15,11 +16,13 @@ let fn, fn_labels, fn_colors;
 // npoint = 10000;
 // mshape = [4,4];
 
-fn = 'data/mnist/fc2.bin';
-fn_labels = 'data/mnist/labels.bin';
-npoint = 1000;
-mshape = [10,3];
-
+fn = 'data/mnist5000_30/fc2.bin';
+// fn = 'data/mnist5000_30/softmax.bin';
+fn_labels = 'data/mnist5000_30/labels.bin';
+npoint = 5000;
+mshape = [10,5];
+nepoch = 30;
+epoch = nepoch-1;
 
 // fn = 'data/iris/data.bin';
 // fn_labels = 'data/iris/labels.bin';
@@ -34,11 +37,20 @@ mshape = [10,3];
 indim = mshape[0];
 outdim = mshape[1];
 let m = math.eye(mshape);
+// m = d3.range(indim).map(i=>d3.range(outdim).map(j=>Math.random()-0.5));
+
 
 
 window.onkeypress = function(){
     if(event.key == ' '){
         gt.shouldPlay = !gt.shouldPlay;
+    }else if(event.key == 'f'){
+        gt.STEPSIZE *=1.5;
+    }else if(event.key == 's'){
+        gt.STEPSIZE /= 5;
+    }else if(event.key == 'n'){
+      epoch = (epoch + 1)%nepoch;
+      data = dataTensor[epoch];
     }
 };
 
@@ -52,7 +64,8 @@ window.onload = function(){
   svg = overlay.init();
 
   utils.loadDataBin(fn, (buffer, url)=>{
-    data = utils.reshape(new Float32Array(buffer), [npoint, indim]);
+    dataTensor = utils.reshape(new Float32Array(buffer), [nepoch, npoint, indim]);
+    data = dataTensor[nepoch-1];
     dmax = math.max(data);
     axisLength = math.max(data)/2;
     updateModelViewMatrix(dmax);

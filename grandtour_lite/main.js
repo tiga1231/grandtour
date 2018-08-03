@@ -12,20 +12,35 @@ var dataTensor, data, labels;
 var points, colors;
 var t = 0;
 
-var dmax = 10;
-var ndim;//ndim = 5;
-var npoint = 150;
-var nepoch = 1;
-
-
 var fn, fn_labels, fn_colors;
-
-
-fn =  'data.bin';
-fn_labels = 'labels.bin';
+var dmax = 1;
+var ndim;//ndim = 5;
+var npoint = 51;
+var nepoch = 31;
+// fn =  'data.bin';
+// fn_labels = 'labels.bin';
 // fn_colors = 'colors.bin';
+//// var fn_json = 'projected.json';
 
-// var fn_json = 'projected.json';
+// fn =  'data/2cluster_conv1weight/data.bin';
+// fn_labels = 'data/2cluster_conv1weight/labels.bin';
+// dmax = 5;
+// npoint = 50;
+// nepoch = 11;
+
+
+fn =  'data/2cluster_image10class/data.bin';
+fn_labels = 'data/2cluster_image10class/labels.bin';
+dmax = 50;
+npoint = 50;
+nepoch = 11;
+
+// fn =  'data/interpolated_image10class/data.bin';
+// dmax = 50;
+// npoint = 51;
+// nepoch = 31;
+
+
 
 var epoch = 0;
 var shouldAnimate = true;
@@ -146,12 +161,11 @@ function updateDmax(){
 }
 
 
-function createAxisPoints(ndim, r){
-    if(r===undefined){
-        r = 1;
+function createAxisPoints(ndim, axisLength){
+    if(axisLength===undefined){
+        axisLength = 1;
     }
-
-    var res = math.multiply(math.eye(ndim), r)._data;
+    var res = math.multiply(math.eye(ndim), axisLength)._data;
     for(var i=ndim-1; i>=0; i--){
         res.splice(i, 0, math.zeros(ndim)._data);
     }
@@ -368,6 +382,7 @@ function render(now){
         var vPosition = gl.getAttribLocation( program, "vPosition" );
         gl.vertexAttribPointer( vPosition, 3, gl.FLOAT, false, 0, 0 );
         gl.drawArrays( gl.POINTS, 0, npoint );
+        // gl.drawArrays( gl.LINE_STRIP, 0, npoint );
 
         // draw axis lines
         // gl.drawArrays( gl.POINTS, points.length-ndim*2, ndim*2);

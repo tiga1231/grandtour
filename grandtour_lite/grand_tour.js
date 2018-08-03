@@ -19,7 +19,7 @@ gt.initThetas = function(N){
   for(var i=0; i<N; i++){
     this.thetas[i] = (Math.random()/2) * Math.PI*2;
   }
-}
+};
 
 
 gt.setNdim = function(newNdim){
@@ -40,7 +40,7 @@ gt.getRotationMatrix = function(dim0, dim1, theta){
   res[dim1][dim0] = -Math.sin(theta);
   res[dim1][dim1] = Math.cos(theta);
   return res;
-}
+};
 
 
 gt.multiplyRotationMatrix = function(matrix, i,j, theta){
@@ -55,25 +55,13 @@ gt.multiplyRotationMatrix = function(matrix, i,j, theta){
     matrix[rowIndex][j] = column_i[rowIndex]*sin + column_j[rowIndex]*cos;
   }
   return matrix;
-}
+};
 
 
 gt.getMatrix = function(t){
-
   var angles = this.thetas.map(theta=>t*theta*this.STEPSIZE);
-  
   var matrix = math.eye(this.ndim)._data;
   var k = -1;
-  
-  // for(var i=0; i<this.ndim; i++){
-  //   for(var j=0; j<this.ndim; j++){
-  //     if(i!==j){
-  //       k++;
-  //       matrix = this.multiplyRotationMatrix(matrix, i,j, angles[k]);
-  //     }
-  //   }
-  // }
-
   for(var i=0; i<this.ndim; i++){
     for(var j=0; j<this.ndim; j++){
       if(i!==j && (true || i<=3 || j<=3) ){
@@ -84,14 +72,23 @@ gt.getMatrix = function(t){
   }
   matrix = math.transpose(matrix);
   matrix = matrix.slice(0,3);
-  // matrix[0]=[1,0,0,0];
-  // matrix[2]=[0,1,0,0];
   matrix = math.transpose(matrix);
   return matrix;
-}
+};
 
+// gt.get3dRotaionMatrix = function(t){
+//     var theta = 0.01 * t;
+//     var cos = Math.cos(theta);
+//     var sin = Math.sin(theta);
+//     return [
+//     [ cos,  0, sin],
+//     [   0,  1,   0],
+//     [-sin,  0, cos]];
+//   };
+  
 gt.project = function(data, t){
   var res = math.multiply(data, this.getMatrix(t));
+  // res = math.multiply(res, gt.get3dRotaionMatrix(t));
   return res;
-}
+};
 

@@ -51,7 +51,7 @@ overlay.drawAxes = function(coordinates){
   .enter()
   .append('circle')
   .attr('class', 'anchor')
-  .attr('opacity', 0.7);
+  .attr('opacity', 0.2);
 
 
   let archorRadius = 8;

@@ -52,29 +52,44 @@ function GrandTour(ndim){
 
 
   this.getMatrix = function(dt){
-    let matrix;
     if(dt !== undefined){
       if(this.angles === undefined){
-        this.angles = this.thetas.map(theta=>0);
-      }else{
-        this.angles = this.angles.map((a,i)=>a+dt*this.STEPSIZE*this.thetas[i]);
-      }
+        // torus method
+        // this.angles = this.thetas.map(theta=>0);
+        
+        // random walk method
+        this.angles = this.thetas;
 
-      matrix = math.eye(this.ndim)._data;
+        this.matrix = math.eye(this.ndim)._data;
+      }else{
+        // torus method
+        // this.angles = this.angles.map((a,i)=>a+dt*this.STEPSIZE*this.thetas[i]);
+        
+        // random walk method
+        this.angles = this.thetas.map( theta => theta * dt * this.STEPSIZE );
+
+      }
+      // torus method
+      // this.matrix = math.eye(this.ndim)._data;
+
+      
       var k = -1;
       for(var i=0; i<this.ndim; i++){
         for(var j=0; j<this.ndim; j++){
           if(i!==j && (true || i<=3 || j<=3) ){
             k++;
-            matrix = this.multiplyRotationMatrix(matrix, i,j, this.angles[k]);
+            this.matrix = this.multiplyRotationMatrix(this.matrix, i,j, this.angles[k]);
           }
         }
       }
-      this.matrix = matrix;
-    }else{
-      matrix = this.matrix;
+
     }
-    return matrix;
+    return this.matrix;
+  };
+
+
+  this.setMatrix = function(m){
+    this.matrix = m;
   };
 
 
