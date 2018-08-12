@@ -4,17 +4,15 @@ let data, labels, colors;
 
 let npoint, ndim, dmax, axisLength;
 let fn, fn_labels, fn_colors;
-let nepoch = 1;
-let epoch = 0;
+let nepoch;
+let epoch;
 let getMeshIndices = undefined;
-let DATA_BOUND_HORIZONTAL = 2;
-
+let DATA_BOUND_HORIZONTAL = 1.5;
 
 // fn = 'data/digits/data.bin';
 // fn_labels = 'data/digits/labels.bin';
 // npoint = 1797;
 // ndim = 64;
-
 
 // fn = 'data/klein_bottle/data.bin';
 // // fn_colors = 'data/klein_bottle/colors.bin';
@@ -41,10 +39,10 @@ let DATA_BOUND_HORIZONTAL = 2;
 
 fn = 'data/fashion-mnist/softmax.bin';
 fn_labels = 'data/fashion-mnist/labels.bin'; //an  array (uint8) of integers;
-npoint = 5000;
+npoint = 10000;
 ndim = 10;
 nepoch = 101;
-
+epoch = nepoch - 1;
 // fn = 'data/tesseract/data.bin';
 // npoint = 16;
 // ndim = 4;
@@ -80,10 +78,10 @@ window.onkeypress = function(){
     }else if(event.key == 's'){
         gt.STEPSIZE /= 5;
     }else if(event.key == 'n'){
-      epoch = (epoch + 1)%nepoch;
+      epoch = (epoch+1==nepoch) ? 0:(epoch+1);
       data = dataTensor[epoch];
     }else if(event.key == 'p'){
-      epoch = epoch==0? nepoch-1 : epoch-1;
+      epoch = epoch==0 ? nepoch-1 : epoch-1;
       data = dataTensor[epoch];
     }
 };
@@ -163,9 +161,13 @@ function initGL(){
   data = numeric.random([npoint, ndim]); //data placeholder
 
   canvas = document.querySelector('#myCanvas');
+
+  utils.resizeCanvas(canvas,  window.innerWidth, window.innerHeight);
+
   gl = canvas.getContext('webgl');
   gl.clearColor(...utils.CLEAR_COLOR, 1.0);
   gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.viewport(0,0, canvas.width, canvas.height);
 
   program = glutils.initShaderProgram(gl, 'shaders/vertex.glsl', 'shaders/fragment.glsl');
   program.vertexPositionLoc = gl.getAttribLocation(program, 'aVertexPosition');

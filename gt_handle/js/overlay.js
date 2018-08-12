@@ -2,8 +2,11 @@ let overlay = {};
 
 overlay.init = function(){
   let svg = d3.select('#overlay');
-  let width = +svg.attr('width');
-  let height = +svg.attr('height');
+  let width = canvas.clientWidth;
+  let height = canvas.clientHeight;
+
+  svg.attr('width', width)
+  .attr('height',height);
 
 
   let xmax = DATA_BOUND_HORIZONTAL;

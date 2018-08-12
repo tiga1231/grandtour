@@ -127,3 +127,12 @@ utils.orthogonalize = function(matrix, priorityRow){
    return matrix;
   
 };
+
+
+utils.resizeCanvas = function(canvas, width, height){
+  var DPR = window.devicePixelRatio;
+  canvas.width = width * DPR;
+  canvas.height = height * DPR;
+  canvas.style.width = width;
+  canvas.style.height = height;
+};
