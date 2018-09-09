@@ -1,0 +1,5 @@
+class utils{
+	static a(){
+		
+	}
+}

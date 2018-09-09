@@ -29,11 +29,12 @@ var nepoch = 31;
 // nepoch = 11;
 
 
-fn =  'data/2cluster_image10class/data.bin';
-fn_labels = 'data/2cluster_image10class/labels.bin';
-dmax = 50;
-npoint = 50;
-nepoch = 11;
+fn =  'data/mnist/conv2_pca10.bin';
+fn_labels = 'data/mnist/labels.bin';
+dmax = 150;
+npoint = 1000;
+nepoch = 100;
+ndim = 10;
 
 // fn =  'data/interpolated_image10class/data.bin';
 // dmax = 50;

@@ -37,12 +37,23 @@ let DATA_BOUND_HORIZONTAL = 1.5;
 // nepoch = 30;
 // epoch = nepoch-1;
 
-fn = 'data/fashion-mnist/softmax.bin';
-fn_labels = 'data/fashion-mnist/labels.bin'; //an  array (uint8) of integers;
+// fn = 'data/fashion-mnist/softmax.bin';
+// fn_labels = 'data/fashion-mnist/labels.bin'; //an  array (uint8) of integers;
+// npoint = 10000;
+// ndim = 10;
+// nepoch = 101;
+// epoch = nepoch - 1;
+
+
+fn = 'data/mnist/conv2_pca100_10.bin';
+fn_labels = 'data/mnist/labels10000.bin';
 npoint = 10000;
 ndim = 10;
-nepoch = 101;
-epoch = nepoch - 1;
+nepoch = 100;
+epoch = 0;
+dmax = 100;
+
+
 // fn = 'data/tesseract/data.bin';
 // npoint = 16;
 // ndim = 4;

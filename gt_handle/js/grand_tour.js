@@ -59,7 +59,7 @@ function GrandTour(ndim){
         // random walk method
         this.angles = this.thetas;
 
-        this.matrix = math.eye(this.ndim)._data;
+        this.matrix = math.identity(this.ndim)._data;
       }else{
         // torus method
         // this.angles = this.angles.map((a,i)=>a+dt*this.STEPSIZE*this.thetas[i]);
