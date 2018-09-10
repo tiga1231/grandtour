@@ -4,7 +4,7 @@ import math from 'mathjs';
 export default class GrandTour{
 	constructor({ndim, stepsize=0.00007}){
 		this.ndim = ndim;
-  		this.STEPSIZE = stepsize;
+ 		this.STEPSIZE = stepsize;
 	}
 
 	get ndim(){
@@ -19,11 +19,13 @@ export default class GrandTour{
 	}
 
 	initThetas(N){
-	    this._thetas = new Array(N);
+		this._thetas = new Array(N);
 		for(var i=0; i<N; i++){
 			this._thetas[i] = (Math.random()-0.5) * Math.PI;
 		}
+		this._matrix = math.identity(this.ndim)._data;
 	}
+
 	get thetas(){
 		return this._thetas;
 	}
@@ -42,26 +44,19 @@ export default class GrandTour{
 		return matrix;
 	};
 
-	tick(dt){
-		if(dt !== undefined){
-			if(this.angles === undefined){
-				this.angles = this.thetas;
-				this._matrix = math.identity(this.ndim)._data;
-			}else{
-				this.angles = this.thetas.map( theta => theta * dt * this.STEPSIZE );
-			}
-			var k = -1;
-			for(var i=0; i<this.ndim; i++){
-				for(var j=0; j<this.ndim; j++){
-					if(i!==j && (true || i<=3 || j<=3) ){
-						k++;
-						this._matrix = this.rotateMatrix(this.matrix, i,j, this.angles[k]);
-					}
+	tick(dt=0){
+
+		let angles = this.thetas.map( theta => theta * dt * this.STEPSIZE );
+		var k = -1;
+		for(var i=0; i<this.ndim; i++){
+			for(var j=0; j<this.ndim; j++){
+				if(i!==j && (true || i<=3 || j<=3) ){
+					k++;
+					this._matrix = this.rotateMatrix(this._matrix, i,j, angles[k]);
 				}
 			}
-
 		}
-		return this.matrix;
+		return this._matrix;
 	}
 
 
@@ -72,7 +67,7 @@ export default class GrandTour{
 
 	project(data, dt=0){
 		this.tick(dt);
-		var matrix = this.matrix;
+		var matrix = this._matrix;
 		matrix = matrix.map((row)=>row.slice(0,3));
 		var res = math.multiply(data, matrix);
 		return res;

@@ -10,6 +10,7 @@ import * as glmatrix from 'gl-matrix';
 import utils from './utils';
 import glutil from './glutil';
 import GrandTour from './GrandTour';
+import GrandTourBasicView from './GrandTourBasicView';
 
 const vshader = require('../glsl/gt_vertex.glsl');
 const fshader = require('../glsl/gt_fragment.glsl');
@@ -17,124 +18,102 @@ const dataTensorBuffer = require('../../data/conv2_pca_100_1000_10.bin');
 const labelsBuffer = require('../../data/labels.bin');
 
 window.onload = function(){
-	let dpr = window.devicePixelRatio;
-	
-	let canvas = d3.select('div#root')
-	.append('canvas')
-	.node();
-
-	let gl = glutil.context({
-		canvas: canvas,
-		width: window.innerWidth,
-		height: window.innerHeight,
-		dpr: dpr,
-		contextAttributes: {
-			antialias: true,
-			depth: true
-		}
-	});
-	let program = glutil.program(gl, vshader, fshader);
-	
-	let labels = Array.from(new Uint8Array(labelsBuffer));
-	let shape = [100,1000,10];
-	let dataTensor = math.reshape(Array.from(new Float32Array(dataTensorBuffer)), shape);
-	let data = dataTensor[99];
-	let dmax = math.max(data);
-
-	let gt = new GrandTour({ndim: data[0].length, stepsize: 0.00005});
-
-	let ortho = glmatrix.mat4.create();
-	let ratio = canvas.width / canvas.height;
-	let yRange = dmax*1.5;
-	let xRange = yRange * ratio;
-	glmatrix.mat4.ortho(ortho, 
-		-xRange, xRange, 
-		-yRange,yRange,
-	-100, 100);
-	ortho = math.reshape(Array.from(ortho), [4,4]);
-	
-	glutil.uniform(gl, {
-		name: 'camera',
-		type: 'mat',
-		data: ortho
-	});
-
-	glutil.uniform(gl, {
-		name: 'dpr',
-		type: 'float',
-		data: dpr
-	});
-
-
-
-	let color = labels.map(i=>utils.baseColor[i]);
-	glutil.attribute(gl, {
-		name: 'acolor', 
-		data: color
-	});
-
-	let axisData = math.multiply(dmax, math.identity(data[0].length))._data
-	.map((row)=>{
-		return [math.zeros(row.length)._data, row];
-	})
-	.reduce((a, pair)=>{
-		return a.concat([pair[0],pair[1]]);
-	}, []);
-
-	let axisColor = _.range(data[0].length*2)
-	// .map(i=>utils.baseColor[Math.floor(i/2)]);
-	.map(i=>[1.0,1.0,1.0]);
-
-
-	let then = 0;
-	function render(now){
-		let dt = now - then;
-		then = now;
-		glutil.clear(gl, [0.1,0.1,0.1,1.0]);
-		
-		//=================upload data================
-		glutil.attribute(gl, {
-			name: 'position', 
-			data: gt.project(data.concat(axisData), dt)
-		});
-		glutil.attribute(gl, {
-			name: 'acolor', 
-			data: color.slice(0,data.length).concat(axisColor)
-		});
-
-		//=================draw================
-		glutil.uniform(gl, {
-			name: 'isDrawingAxis', 
-			data: 0
-		});
-		gl.drawArrays(gl.POINTS, 0, data.length);
-
-
-		glutil.uniform(gl, {
-			name: 'isDrawingAxis', 
-			data: 1
-		});
-		gl.drawArrays(gl.LINES, data.length, data[0].length*2);
-
-
 	
 
 
-		requestAnimationFrame(render);
-	}
-	render(0);
+  demo1();
 
 	window.glmatrix = glmatrix;
 	window.utils = utils;
-	window.program = program;
 	window.glutil = glutil;
-	window.gl = gl;
 	window._ = _;
-	window.data = data;
-	window.gt = gt;
 	window.d3 = d3;
 	window.math = math;
 };
+
+function demo1(){
+  let dpr = window.devicePixelRatio;
+  console.log('dpr:', dpr);
+  let divRoot = d3.select('div#root').node();
+
+  let container1 = d3.select(divRoot)
+  .append('div')
+  .style('float', 'left')
+  .node();
+  container1.width = window.innerWidth / 2;
+  container1.height = window.innerHeight;
+
+  let container2 = d3.select(divRoot).append('div')
+  .style('float', 'right')
+  .node();
+  container2.width = window.innerWidth / 2;
+  container2.height = window.innerHeight;
+
+  let labels = Array.from(new Uint8Array(labelsBuffer));
+  let shape = [100,1000,10];
+  let dataTensor = math.reshape(Array.from(new Float32Array(dataTensorBuffer)), shape);
+  let data = dataTensor[99];
+  let dmax = math.max(data);
+
+  let gt = new GrandTour({ndim: 10, stepsize: 0.00005});
+
+  let yRange = 1.5*dmax;
+  let xRange = yRange * container1.width / container1.height;
+  let ortho = glmatrix.mat4.create();
+  glmatrix.mat4.ortho(ortho, -xRange, xRange, -yRange, yRange, -10*yRange, 10*yRange);
+
+
+  let z = 100;
+  let leftEye = glmatrix.mat4.create();
+  glmatrix.mat4.lookAt(leftEye, [-0.5,0,z], [0,0,0], [0,1,0]);
+  glmatrix.mat4.mul(leftEye, ortho, leftEye);
+  leftEye = math.reshape(Array.from(leftEye),[4,4]);
+  let rightEye = glmatrix.mat4.create();
+  glmatrix.mat4.lookAt(rightEye, [0.5,0,z], [0,0,0], [0,1,0]);
+  glmatrix.mat4.mul(rightEye, ortho, rightEye);
+  rightEye = math.reshape(Array.from(rightEye),[4,4]);
+
+  let gtv = new GrandTourBasicView({
+    container: container1,
+    dataTensor: dataTensor, 
+    shape: [100,1000,10],
+    labels: labels,
+    
+    gt: gt,
+    camera: leftEye,
+    dpr: dpr,
+    contextAttributes: {
+      antialias: true,
+      depth: true
+    }
+  });
+
+  let gtv2 = new GrandTourBasicView({
+    container: container2,
+    dataTensor: dataTensor, 
+    shape: [100,1000,10],
+    labels: labels,
+    
+    gt: gt,
+    camera: rightEye,
+    dpr: dpr,
+    contextAttributes: {
+      antialias: true,
+      depth: true
+    }
+  });
+
+  let then = 0;
+  let play = (now=0)=>{
+    let dt = now - then;
+    gt.tick(dt);
+    then = now;
+    gtv.render(0);
+    gtv2.render(0);
+    window.requestAnimationFrame(play);
+  };
+  play();
+}
 
 
 

@@ -8,8 +8,10 @@ export default class glutil{
 
   static context({
     container, canvas, 
-    width, height, 
     dpr, contextAttributes}){
+
+    let width = container.width;
+    let height = container.height;
 
     if(dpr === undefined){
       dpr = window.devicePixelRatio || 1;
