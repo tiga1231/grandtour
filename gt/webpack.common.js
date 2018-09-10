@@ -30,9 +30,13 @@ module.exports = {
 			use: [MiniCssExtractPlugin.loader, "css-loader"]
 		},
 		{
-            test: /\.glsl$/,
-            use: {loader: 'webpack-glsl-loader'}
-        }
+      test: /\.glsl$/,
+      use: {loader: 'webpack-glsl-loader'}
+  	},
+  	{
+      test: /\.bin$/,
+      use: {loader: 'arraybuffer-loader'}
+    }
 		]
 	},
   plugins: [
