@@ -14,14 +14,12 @@ const fshader = require('../glsl/gt_fragment.glsl');
 
 
 export default class GrandTourBasicView{
-  constructor({ dataTensor, labels, shape, gt,
+  constructor({ data, labels, gt,
     container, 
     dpr=1, camera=math.reshape(Array.from(glmatrix.mat4.create()), [4,4]), 
     contextAttributes}){
-    this.dataTensor = dataTensor;
-    this.data = dataTensor[shape[0]-1];
+    this.data = data;
     this.ndim = this.data[0].length;
-    this.shape = shape;
     this.labels = labels;
 
 
@@ -37,13 +35,9 @@ export default class GrandTourBasicView{
     }
 
     this.camera = camera;
-    this.dmax = math.max(this.dataTensor);
 
-    let ratio = this.canvas.width / this.canvas.height;
-    let yRange = this.dmax*1.5;
-    let xRange = yRange * ratio;
+    this.dmax = math.max(this.data);
     
-
     glutil.uniform(this.gl, {
       name: 'camera',
       type: 'mat',
