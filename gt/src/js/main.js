@@ -14,12 +14,22 @@ import GrandTourBasicView from './GrandTourBasicView';
 
 const vshader = require('../glsl/gt_vertex.glsl');
 const fshader = require('../glsl/gt_fragment.glsl');
-// const dataTensorBuffer = require('../../data/conv2_pca_100_1000_10.bin');
-const dataTensorBuffer = require('../../data/softmax.bin');
-const labelsBuffer = require('../../data/labels.bin');
+
+const dataset = 'fashion-mnist';
+// const conv1TensorBuffer = require('../../data/'+dataset+'/conv1_pca_100_1000_20.bin');
+// const conv2TensorBuffer = require('../../data/'+dataset+'/conv2_pca_100_1000_20.bin');
+// const fc1TensorBuffer = require('../../data/'+dataset+'/fc1_pca_100_1000_20.bin');
+// const fc2TensorBuffer = require('../../data/'+dataset+'/fc2_pca_100_1000_10.bin');
+// const softmaxTensorBuffer = require('../../data/'+dataset+'/softmax_pca_100_1000_10.bin');
+
+const dataTensorBuffer = require('../../data/'+dataset+'/fc1_pca_100_1000_20.bin');
+const labelsBuffer = require('../../data/'+dataset+'/labels_1000.bin');
 
 window.onload = function(){
-  demo2();
+  // demoSingleView();
+  // demoTwoLayers();
+  // demoMultiLayers();
+  demoTwoEyeCamera();
 
 	window.glmatrix = glmatrix;
 	window.utils = utils;
@@ -35,7 +45,211 @@ window.clean = ()=>{
 }
 
 
-function demo2(){
+function demoMultiLayers(){
+  let dpr = window.devicePixelRatio;
+  console.log('dpr:', dpr);
+  let divRoot = d3.select('div#root').node();
+  let labels = Array.from(new Uint8Array(labelsBuffer));
+
+  let nameBufferPairs = _.zip(
+    ['conv1', 'conv2', 'fc1', 'fc2', 'softmax'],
+    [conv1TensorBuffer, conv2TensorBuffer, fc1TensorBuffer, fc2TensorBuffer, softmaxTensorBuffer]
+    );
+  let gt;
+
+  _.each(nameBufferPairs, ([name, buffer])=>{
+    console.log(name);
+
+    let container = d3.select(divRoot)
+    .append('div')
+    .style('float', 'left')
+    .node();
+    container.width = window.innerWidth/5;
+    container.height = window.innerHeight;
+
+    let ndim;
+    if(name==='conv1' || name==='conv2' || name==='fc1'){
+      ndim = 20;
+    }else{
+      ndim = 10;
+    }
+
+    if(name==='conv1' || name == 'fc2'){
+      gt = new GrandTour({ndim: ndim, stepsize: 0.000025});
+    }
+
+    let tensor = math.reshape(Array.from(new Float32Array(buffer)), [100,1000,ndim]);
+    let data = tensor[99];
+    let dmax = math.max(data);
+
+
+    let xRange, yRange;
+    if(container.width > container.height){
+      yRange = 1.0*dmax;
+      xRange = yRange * container.width / container.height;
+    }else{
+      xRange = 1.0*dmax;
+      yRange = xRange * container.height / container.width;
+    }
+    let ortho = glmatrix.mat4.create();
+    glmatrix.mat4.ortho(ortho, -xRange, xRange, -yRange, yRange, -1000*yRange, 1000*yRange);
+    ortho = math.reshape(Array.from(ortho), [4,4]);
+    let gtv = new GrandTourBasicView({
+      container: container,
+      data: data, 
+      labels: labels,
+      gt: gt,
+      camera: ortho,
+      dpr: dpr,
+    });
+    gtv.animate();
+
+    let epoch = 0;
+    let nepoch = 100;
+    gtv.data = tensor[epoch];
+    window.addEventListener("keypress", ()=>{
+      if(event.key == 'n' || event.key == 'p'){
+        if(event.key == 'n'){
+          epoch += 1;
+          epoch = epoch==nepoch ? 0 : epoch;
+        }else if(event.key == 'p'){
+          epoch -= 1;
+          epoch = epoch<0 ? nepoch-1 : epoch;
+        }
+        gtv.data = tensor[epoch];
+      }
+    });
+
+    window.addEventListener('resize', ()=>{
+      container.width = window.innerWidth/5;
+      container.height = window.innerHeight;
+      gtv.resize();
+
+      if(container.width > container.height){
+        yRange = 1.1*dmax;
+        xRange = yRange * container.width / container.height;
+      }else{
+        xRange = 1.1*dmax;
+        yRange = xRange * container.height / container.width;
+      }
+
+      let ortho = glmatrix.mat4.create();
+      glmatrix.mat4.ortho(ortho, -xRange, xRange, -yRange, yRange, -1000*yRange, 1000*yRange);
+      ortho = math.reshape(Array.from(ortho),[4,4]);
+      gtv.camera = ortho;
+      glutil.uniform(gtv.gl, {
+        name: 'camera',
+        type: 'mat',
+        data: gtv.camera
+      });
+    });
+
+  });
+}
+
+
+function demoTwoLayers(){
+  //two views that shows two layers
+  let dpr = window.devicePixelRatio;
+  console.log('dpr:', dpr);
+  let divRoot = d3.select('div#root').node();
+
+  let conv2Container = d3.select(divRoot)
+  .append('div')
+  .style('float', 'left')
+  .node();
+  conv2Container.width = window.innerWidth/2;
+  conv2Container.height = window.innerHeight;
+
+  let softmaxContainer = d3.select(divRoot)
+  .append('div')
+  .style('float', 'left')
+  .node();
+  softmaxContainer.width = window.innerWidth/2;
+  softmaxContainer.height = window.innerHeight;
+  
+  let labels = Array.from(new Uint8Array(labelsBuffer));
+
+  let conv2Tensor = math.reshape(Array.from(new Float32Array(conv2TensorBuffer)), [100,1000,20]);
+  let conv2Data = conv2Tensor[99];
+  let conv2Dmax = math.max(conv2Data);
+
+  let softmaxTensor = math.reshape(Array.from(new Float32Array(softmaxTensorBuffer)), [100,1000,10]);
+  let softmaxData = softmaxTensor[99];
+  let softmaxDmax = math.max(softmaxTensor[99]);
+  
+  let conv2Gt = new GrandTour({ndim: 20, stepsize: 0.000025});
+  let softmaxGt = new GrandTour({ndim: 10, stepsize: 0.000025});
+
+  let xRange, yRange;
+  if(softmaxContainer.width > softmaxContainer.height){
+    yRange = 1.1*softmaxDmax;
+    xRange = yRange * softmaxContainer.width / softmaxContainer.height;
+  }else{
+    xRange = 1.1*softmaxDmax;
+    yRange = xRange * softmaxContainer.height / softmaxContainer.width;
+  }
+  let ortho = glmatrix.mat4.create();
+  glmatrix.mat4.ortho(ortho, -xRange, xRange, -yRange, yRange, -1000*yRange, 1000*yRange);
+  ortho = math.reshape(Array.from(ortho), [4,4]);
+  let softmaxGtv = new GrandTourBasicView({
+    container: softmaxContainer,
+    data: softmaxData, 
+    labels: labels,
+    gt: softmaxGt,
+    camera: ortho,
+    dpr: dpr,
+  });
+  softmaxGtv.animate();
+
+
+  if(conv2Container.width > conv2Container.height){
+    yRange = 1.1*conv2Dmax;
+    xRange = yRange * conv2Container.width / conv2Container.height;
+  }else{
+    xRange = 1.1*conv2Dmax;
+    yRange = xRange * conv2Container.height / conv2Container.width;
+  }
+  ortho = glmatrix.mat4.create();
+  glmatrix.mat4.ortho(ortho, -xRange, xRange, -yRange, yRange, -1000*yRange, 1000*yRange);
+  ortho = math.reshape(Array.from(ortho), [4,4]);
+  let conv2Gtv = new GrandTourBasicView({
+    container: conv2Container,
+    data: conv2Data, 
+    labels: labels,
+    gt: conv2Gt,
+    camera: ortho,
+    dpr: dpr,
+  });
+  conv2Gtv.animate();
+
+  // simple controller that switch epoch on key press
+  let epoch = 0;
+  let nepoch = 100;
+  softmaxGtv.data = softmaxTensor[epoch];
+  conv2Gtv.data = conv2Tensor[epoch];
+  window.onkeypress = (event)=>{
+    if(event.key == 'n' || event.key == 'p'){
+      if(event.key == 'n'){
+        epoch += 1;
+        epoch = epoch==nepoch ? 0 : epoch;
+
+      }else if(event.key == 'p'){
+        epoch -= 1;
+        epoch = epoch<0 ? nepoch-1 : epoch;
+      }
+      softmaxGtv.data = softmaxTensor[epoch];
+      conv2Gtv.data = conv2Tensor[epoch];
+
+    }
+  };
+
+
+}
+
+
+
+function demoSingleView(){
   //single view that supports next epoch
   let dpr = window.devicePixelRatio;
   console.log('dpr:', dpr);
@@ -50,7 +264,7 @@ function demo2(){
 
   let labels = Array.from(new Uint8Array(labelsBuffer));
   let shape = [100,1000,10];
-  let dataTensor = math.reshape(Array.from(new Float32Array(dataTensorBuffer)), shape);
+  let dataTensor = math.reshape(Array.from(new Float32Array(softmaxTensorBuffer)), shape);
   let data = dataTensor[99];
   let dmax = math.max(dataTensor[99]);
   console.log(dmax);
@@ -77,7 +291,6 @@ function demo2(){
     camera: ortho,
     dpr: dpr,
   });
-
   // simple controller that switch epoch on key press
   let epoch = 0;
   let nepoch = 100;
@@ -99,7 +312,7 @@ function demo2(){
 }
 
 
-function demo1(){
+function demoTwoEyeCamera(){
   //two-eye camera
   let dpr = window.devicePixelRatio;
   console.log('dpr:', dpr);
@@ -119,43 +332,43 @@ function demo1(){
   container2.height = window.innerHeight;
 
   let labels = Array.from(new Uint8Array(labelsBuffer));
-  let shape = [100,1000,10];
+  let shape = [100,1000,20];
   let dataTensor = math.reshape(Array.from(new Float32Array(dataTensorBuffer)), shape);
   let data = dataTensor[99];
   let dmax = math.max(dataTensor[99]);
   console.log(dmax);
 
-  let gt = new GrandTour({ndim: 10, stepsize: 0.00005});
+  let gt = new GrandTour({ndim: 20, stepsize: 0.00015});
 
   let xRange, yRange;
-  if(container1.width > container1.height){
+  if(container.width > container.height){
     yRange = 1.1*dmax;
-    xRange = yRange * container1.width / container1.height;
+    xRange = yRange * container.width / container.height;
   }else{
     xRange = 1.1*dmax;
-    yRange = xRange * container1.height / container1.width;
+    yRange = xRange * container.height / container.width;
   }
-
   let ortho = glmatrix.mat4.create();
   glmatrix.mat4.ortho(ortho, -xRange, xRange, -yRange, yRange, -1000*yRange, 1000*yRange);
-
 
   let z = 100*dmax;
   let leftEye = glmatrix.mat4.create();
   glmatrix.mat4.lookAt(leftEye, [-0.5,0,z], [0,0,0], [0,1,0]);
-  glmatrix.mat4.mul(leftEye, ortho, leftEye);
-  leftEye = math.reshape(Array.from(leftEye),[4,4]);
+  // glmatrix.mat4.mul(leftEye, ortho, leftEye);
   let rightEye = glmatrix.mat4.create();
   glmatrix.mat4.lookAt(rightEye, [0.5,0,z], [0,0,0], [0,1,0]);
-  glmatrix.mat4.mul(rightEye, ortho, rightEye);
-  rightEye = math.reshape(Array.from(rightEye),[4,4]);
+  // glmatrix.mat4.mul(rightEye, ortho, rightEye);
+  
+  let leftEyeArray = math.reshape(Array.from(glmatrix.mat4.mul(glmatrix.mat4.create(), ortho, leftEye)),[4,4]);
+  let rightEyeArray = math.reshape(Array.from(glmatrix.mat4.mul(glmatrix.mat4.create(), ortho, rightEye)),[4,4]);
+
 
   let gtv = new GrandTourBasicView({
     container: container,
     data: data, 
     labels: labels,
     gt: gt,
-    camera: leftEye,
+    camera: leftEyeArray,
     dpr: dpr,
     contextAttributes: {
       antialias: true,
@@ -168,7 +381,7 @@ function demo1(){
     data: data, 
     labels: labels,
     gt: gt,
-    camera: rightEye,
+    camera: rightEyeArray,
     dpr: dpr,
     contextAttributes: {
       antialias: true,
@@ -186,6 +399,60 @@ function demo1(){
     window.requestAnimationFrame(play);
   };
   play();
+
+  // simple controller that switch epoch on key press
+  let epoch = 0;
+  let nepoch = 100;
+  gtv.data = dataTensor[epoch];
+  gtv2.data = dataTensor[epoch];
+  window.onkeypress = function(event){
+    if(event.key == 'n' || event.key == 'p'){
+      if(event.key == 'n'){
+        epoch += 1;
+        epoch = epoch==nepoch ? 0 : epoch;
+      }else if(event.key == 'p'){
+        epoch -= 1;
+        epoch = epoch<0 ? nepoch-1 : epoch;
+      }
+      gtv.data = dataTensor[epoch];
+      gtv2.data = dataTensor[epoch];
+    }
+  };
+
+  window.onresize = ()=>{
+    container.width = window.innerWidth/2;
+    container.height = window.innerHeight;
+    container2.width = window.innerWidth/2;
+    container2.height = window.innerHeight;
+    gtv.resize();
+    gtv2.resize();
+
+    if(container.width > container.height){
+      yRange = 1.1*dmax;
+      xRange = yRange * container.width / container.height;
+    }else{
+      xRange = 1.1*dmax;
+      yRange = xRange * container.height / container.width;
+    }
+    let ortho = glmatrix.mat4.create();
+    glmatrix.mat4.ortho(ortho, -xRange, xRange, -yRange, yRange, -1000*yRange, 1000*yRange);
+    let leftEyeArray = math.reshape(Array.from(glmatrix.mat4.mul(glmatrix.mat4.create(), ortho, leftEye)),[4,4]);
+    let rightEyeArray = math.reshape(Array.from(glmatrix.mat4.mul(glmatrix.mat4.create(), ortho, rightEye)),[4,4]);
+    gtv.camera = leftEyeArray;
+    gtv2.camera = rightEyeArray;
+
+    glutil.uniform(gtv.gl, {
+      name: 'camera',
+      type: 'mat',
+      data: gtv.camera
+    });
+    glutil.uniform(gtv2.gl, {
+      name: 'camera',
+      type: 'mat',
+      data: gtv2.camera
+    });
+
+  };
 }
 
 

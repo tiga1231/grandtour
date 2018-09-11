@@ -45,7 +45,6 @@ export default class GrandTour{
 	};
 
 	tick(dt=0){
-
 		let angles = this.thetas.map( theta => theta * dt * this.STEPSIZE );
 		var k = -1;
 		for(var i=0; i<this.ndim; i++){

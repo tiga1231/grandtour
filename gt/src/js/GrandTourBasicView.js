@@ -16,7 +16,8 @@ const fshader = require('../glsl/gt_fragment.glsl');
 export default class GrandTourBasicView{
   constructor({ data, labels, gt,
     container, 
-    dpr=1, camera=math.reshape(Array.from(glmatrix.mat4.create()), [4,4]), 
+    dpr=1, 
+    camera=math.reshape(Array.from(glmatrix.mat4.create()), [4,4]), 
     contextAttributes}){
     this.data = data;
     this.ndim = this.data[0].length;
@@ -26,12 +27,12 @@ export default class GrandTourBasicView{
       this.labels = labels;
     }
     this.color = this.labels.map(i=>utils.baseColor[i]);
-
+    this.container = container;
     this.gl = glutil.context({
       container, dpr, contextAttributes});
     this.canvas = this.gl.canvas;
     this.program = glutil.program(this.gl, vshader, fshader);
-    
+    this.dpr = dpr;
     if(gt === undefined){
       this.gt = new GrandTour({ndim: this.ndim, stepsize: 0.00005});
     }else{
@@ -39,7 +40,6 @@ export default class GrandTourBasicView{
     }
 
     this.camera = camera;
-
     this.dmax = math.max(this.data);
     
     glutil.uniform(this.gl, {
@@ -81,6 +81,17 @@ export default class GrandTourBasicView{
     this.then = 0;
   }
 
+  resize(){
+    let width = this.container.width;
+    let height = this.container.height;
+    this.canvas.width = width * this.dpr;
+    this.canvas.style.width = width + 'px';
+    this.canvas.height = height * this.dpr;
+    this.canvas.style.height = height + 'px';
+    this.gl.viewport(0,0,this.canvas.width,this.canvas.height);
+  }
+
+
   set data(d){
     this._data = d;
   }
@@ -101,6 +112,7 @@ export default class GrandTourBasicView{
     //=================upload data================
     glutil.attribute(this.gl, {
       name: 'position', 
+      type: 'float',
       data: this.gt.project(this.data.concat(this.axisData), dt)
     });
     //=================draw================
