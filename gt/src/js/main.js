@@ -19,7 +19,7 @@ const dataTensorBuffer = require('../../data/softmax.bin');
 const labelsBuffer = require('../../data/labels.bin');
 
 window.onload = function(){
-  demo1();
+  demo2();
 
 	window.glmatrix = glmatrix;
 	window.utils = utils;
@@ -35,17 +35,82 @@ window.clean = ()=>{
 }
 
 
-function demo1(){
+function demo2(){
+  //single view that supports next epoch
   let dpr = window.devicePixelRatio;
   console.log('dpr:', dpr);
   let divRoot = d3.select('div#root').node();
 
-  let container1 = d3.select(divRoot)
+  let container = d3.select(divRoot)
   .append('div')
   .style('float', 'left')
   .node();
-  container1.width = window.innerWidth / 2;
-  container1.height = window.innerHeight;
+  container.width = window.innerWidth;
+  container.height = window.innerHeight;
+
+  let labels = Array.from(new Uint8Array(labelsBuffer));
+  let shape = [100,1000,10];
+  let dataTensor = math.reshape(Array.from(new Float32Array(dataTensorBuffer)), shape);
+  let data = dataTensor[99];
+  let dmax = math.max(dataTensor[99]);
+  console.log(dmax);
+
+  let gt = new GrandTour({ndim: 10, stepsize: 0.00005});
+
+  let xRange, yRange;
+  if(container.width > container.height){
+    yRange = 1.1*dmax;
+    xRange = yRange * container.width / container.height;
+  }else{
+    xRange = 1.1*dmax;
+    yRange = xRange * container.height / container.width;
+  }
+  let ortho = glmatrix.mat4.create();
+  glmatrix.mat4.ortho(ortho, -xRange, xRange, -yRange, yRange, -1000*yRange, 1000*yRange);
+  ortho = math.reshape(Array.from(ortho), [4,4]);
+  
+  let gtv = new GrandTourBasicView({
+    container: container,
+    data: data, 
+    labels: labels,
+    gt: gt,
+    camera: ortho,
+    dpr: dpr,
+  });
+
+  // simple controller that switch epoch on key press
+  let epoch = 0;
+  let nepoch = 100;
+  gtv.data = dataTensor[epoch];
+  window.onkeypress = function(event){
+    if(event.key == 'n' || event.key == 'p'){
+      if(event.key == 'n'){
+        epoch += 1;
+        epoch = epoch==nepoch ? 0 : epoch;
+
+      }else if(event.key == 'p'){
+        epoch -= 1;
+        epoch = epoch<0 ? nepoch-1 : epoch;
+      }
+      gtv.data = dataTensor[epoch];
+    }
+  }
+  gtv.animate();
+}
+
+
+function demo1(){
+  //two-eye camera
+  let dpr = window.devicePixelRatio;
+  console.log('dpr:', dpr);
+  let divRoot = d3.select('div#root').node();
+
+  let container = d3.select(divRoot)
+  .append('div')
+  .style('float', 'left')
+  .node();
+  container.width = window.innerWidth / 2;
+  container.height = window.innerHeight;
 
   let container2 = d3.select(divRoot).append('div')
   .style('float', 'right')
@@ -72,10 +137,10 @@ function demo1(){
   }
 
   let ortho = glmatrix.mat4.create();
-  glmatrix.mat4.ortho(ortho, -xRange, xRange, -yRange, yRange, -10*yRange, 10*yRange);
+  glmatrix.mat4.ortho(ortho, -xRange, xRange, -yRange, yRange, -1000*yRange, 1000*yRange);
 
 
-  let z = 5*dmax;
+  let z = 100*dmax;
   let leftEye = glmatrix.mat4.create();
   glmatrix.mat4.lookAt(leftEye, [-0.5,0,z], [0,0,0], [0,1,0]);
   glmatrix.mat4.mul(leftEye, ortho, leftEye);
@@ -86,10 +151,9 @@ function demo1(){
   rightEye = math.reshape(Array.from(rightEye),[4,4]);
 
   let gtv = new GrandTourBasicView({
-    container: container1,
+    container: container,
     data: data, 
     labels: labels,
-    
     gt: gt,
     camera: leftEye,
     dpr: dpr,
@@ -103,7 +167,6 @@ function demo1(){
     container: container2,
     data: data, 
     labels: labels,
-    
     gt: gt,
     camera: rightEye,
     dpr: dpr,

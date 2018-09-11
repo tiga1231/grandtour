@@ -20,8 +20,12 @@ export default class GrandTourBasicView{
     contextAttributes}){
     this.data = data;
     this.ndim = this.data[0].length;
-    this.labels = labels;
-
+    if(labels === undefined){
+      this.labels = this.data.map(()=>0);
+    }else{
+      this.labels = labels;
+    }
+    this.color = this.labels.map(i=>utils.baseColor[i]);
 
     this.gl = glutil.context({
       container, dpr, contextAttributes});
@@ -50,9 +54,9 @@ export default class GrandTourBasicView{
       data: dpr
     });
 
-    this.color = this.labels.map(i=>utils.baseColor[i]);
     glutil.attribute(this.gl, {
       name: 'acolor', 
+      type: 'float',
       data: this.color
     });
 
@@ -67,33 +71,38 @@ export default class GrandTourBasicView{
     this.axisColor = _.range(this.ndim*2)
     // .map(i=>utils.baseColor[Math.floor(i/2)]);
     .map(i=>[1.0,1.0,1.0]);//white axis line
-    // 
+
+    glutil.attribute(this.gl, {
+      name: 'acolor', 
+      type: 'float',
+      data: this.color.slice(0,this.data.length).concat(this.axisColor)
+    });
+
     this.then = 0;
   }
 
-  play(){
-    this.amimate();
+  set data(d){
+    this._data = d;
+  }
+  get data(){
+    return this._data;
   }
 
-  amimate(now=0){
+
+  animate(now=0){
     let dt = now - this.then;
     this.then = now;
     this.render(dt);
-    window.requestAnimationFrame(this.amimate.bind(this));
+    window.requestAnimationFrame(this.animate.bind(this));
   }
 
   render(dt=0){
-    glutil.clear(this.gl, [0.1,0.1,0.1,1.0]);
+    glutil.clear(this.gl, [0.15,0.15,0.15,1.0]);
     //=================upload data================
     glutil.attribute(this.gl, {
       name: 'position', 
       data: this.gt.project(this.data.concat(this.axisData), dt)
     });
-    glutil.attribute(this.gl, {
-      name: 'acolor', 
-      data: this.color.slice(0,this.data.length).concat(this.axisColor)
-    });
-
     //=================draw================
     glutil.uniform(this.gl, {
       name: 'isDrawingAxis', 

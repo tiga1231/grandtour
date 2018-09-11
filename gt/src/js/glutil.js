@@ -97,7 +97,19 @@ export default class glutil{
       }
 
       data = _.flatten(data);
-      if(glutil.isFloat(data[0])){
+
+      let type;
+      if(obj.type !== undefined){
+        type = obj.type;
+      }else{
+        if(glutil.isFloat(data[0])){
+          type = 'float';
+        }else{
+          type = 'int';
+        }
+      }
+
+      if(type === 'float'){
         let buffer;
         if(obj.buffer === undefined){
           buffer = gl.createBuffer();
@@ -108,6 +120,8 @@ export default class glutil{
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
         gl.vertexAttribPointer(loc, dim, gl.FLOAT, true, 0,0);
         gl.enableVertexAttribArray(loc);
+      }else{
+        //TODO
       }
     }
     
