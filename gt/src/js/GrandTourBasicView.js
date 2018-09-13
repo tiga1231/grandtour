@@ -100,12 +100,29 @@ export default class GrandTourBasicView{
   }
 
 
-  animate(now=0){
-    let dt = now - this.then;
-    this.then = now;
+  play(now=0){
+    let dt;
+
+    if(now!=0 && this.then==0){ //resume from stop()
+      dt = 0;
+      this.then = now;
+    }else if(now==0){ //beginning of time
+      dt = 0;
+    }else{ //normal case
+      dt = now - this.then;
+      this.then = now;
+    }
+
     this.render(dt);
-    window.requestAnimationFrame(this.animate.bind(this));
+    this.animationId = window.requestAnimationFrame(this.play.bind(this));
   }
+
+  stop(){
+    window.cancelAnimationFrame(this.animationId);
+    this.animationId = undefined;
+    this.then = 0;
+  }
+
 
   render(dt=0){
     glutil.clear(this.gl, [0.15,0.15,0.15,1.0]);

@@ -11,6 +11,8 @@ import utils from './utils';
 import glutil from './glutil';
 import GrandTour from './GrandTour';
 import GrandTourBasicView from './GrandTourBasicView';
+import GrandTourBasicController from './GrandTourBasicController';
+
 
 const vshader = require('../glsl/gt_vertex.glsl');
 const fshader = require('../glsl/gt_fragment.glsl');
@@ -20,16 +22,18 @@ const dataset = 'fashion-mnist';
 // const conv2TensorBuffer = require('../../data/'+dataset+'/conv2_pca_100_1000_20.bin');
 // const fc1TensorBuffer = require('../../data/'+dataset+'/fc1_pca_100_1000_20.bin');
 // const fc2TensorBuffer = require('../../data/'+dataset+'/fc2_pca_100_1000_10.bin');
-// const softmaxTensorBuffer = require('../../data/'+dataset+'/softmax_pca_100_1000_10.bin');
-
-const dataTensorBuffer = require('../../data/'+dataset+'/fc1_pca_100_1000_20.bin');
+const softmaxTensorBuffer = require('../../data/'+dataset+'/softmax_pca_100_1000_10.bin');
 const labelsBuffer = require('../../data/'+dataset+'/labels_1000.bin');
 
+
+
 window.onload = function(){
+
   // demoSingleView();
   // demoTwoLayers();
   // demoMultiLayers();
-  demoTwoEyeCamera();
+  // demoTwoEyeCamera();
+  demoController();
 
 	window.glmatrix = glmatrix;
 	window.utils = utils;
@@ -44,6 +48,30 @@ window.clean = ()=>{
   d3.select('div#root').selectAll('div').remove();
 }
 
+
+function demoController(){
+  let dataTensor = math.reshape(Array.from(new Float32Array(softmaxTensorBuffer)), [100,1000,10]);
+  let labels = Array.from(new Uint8Array(labelsBuffer));
+  let container = d3.select('div#root')
+  .append('div')
+  .node();
+  container.width = window.innerWidth;
+  container.height = window.innerHeight;
+
+  let c = new GrandTourBasicController({
+    dataTensor: dataTensor, 
+    labels: labels,
+    container: container, 
+    stepsize: 0.00005
+  });
+  c.play();
+
+  window.controller = c;
+
+}
+function demoDropFile(){
+  //TODO
+}
 
 function demoMultiLayers(){
   let dpr = window.devicePixelRatio;
@@ -333,7 +361,7 @@ function demoTwoEyeCamera(){
 
   let labels = Array.from(new Uint8Array(labelsBuffer));
   let shape = [100,1000,20];
-  let dataTensor = math.reshape(Array.from(new Float32Array(dataTensorBuffer)), shape);
+  let dataTensor = math.reshape(Array.from(new Float32Array(softmaxTensorBuffer)), shape);
   let data = dataTensor[99];
   let dmax = math.max(dataTensor[99]);
   console.log(dmax);
