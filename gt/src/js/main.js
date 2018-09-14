@@ -20,8 +20,8 @@ const fshader = require('../glsl/gt_fragment.glsl');
 const dataset = 'fashion-mnist';
 // const conv1TensorBuffer = require('../../data/'+dataset+'/conv1_pca_100_1000_20.bin');
 // const conv2TensorBuffer = require('../../data/'+dataset+'/conv2_pca_100_1000_20.bin');
-// const fc1TensorBuffer = require('../../data/'+dataset+'/fc1_pca_100_1000_20.bin');
-// const fc2TensorBuffer = require('../../data/'+dataset+'/fc2_pca_100_1000_10.bin');
+const fc1TensorBuffer = require('../../data/'+dataset+'/fc1_pca_100_1000_20.bin');
+const fc2TensorBuffer = require('../../data/'+dataset+'/fc2_pca_100_1000_10.bin');
 const softmaxTensorBuffer = require('../../data/'+dataset+'/softmax_pca_100_1000_10.bin');
 const labelsBuffer = require('../../data/'+dataset+'/labels_1000.bin');
 
@@ -29,11 +29,7 @@ const labelsBuffer = require('../../data/'+dataset+'/labels_1000.bin');
 
 window.onload = function(){
 
-  // demoSingleView();
-  // demoTwoLayers();
-  // demoMultiLayers();
-  // demoTwoEyeCamera();
-  demoController();
+
 
 	window.glmatrix = glmatrix;
 	window.utils = utils;
@@ -41,7 +37,15 @@ window.onload = function(){
 	window._ = _;
 	window.d3 = d3;
 	window.math = math;
+  
+  // demoSingleView();
+  // demoTwoLayers();
+  demoMultiLayers();
+  // demoTwoEyeCamera();
+  // demoController();
+
 };
+
 
 
 window.clean = ()=>{
@@ -50,10 +54,15 @@ window.clean = ()=>{
 
 
 function demoController(){
-  let dataTensor = math.reshape(Array.from(new Float32Array(softmaxTensorBuffer)), [100,1000,10]);
+  let dataTensor = math.reshape(
+    Array.from(new Float32Array(conv2TensorBuffer)), 
+    [100,1000,conv2TensorBuffer.byteLength/4/100/1000]
+  );
+
   let labels = Array.from(new Uint8Array(labelsBuffer));
   let container = d3.select('div#root')
   .append('div')
+  .attr('class', 'container')
   .node();
   container.width = window.innerWidth;
   container.height = window.innerHeight;
@@ -65,13 +74,15 @@ function demoController(){
     stepsize: 0.00005
   });
   c.play();
-
   window.controller = c;
 
 }
+
+
 function demoDropFile(){
   //TODO
 }
+
 
 function demoMultiLayers(){
   let dpr = window.devicePixelRatio;
@@ -80,37 +91,31 @@ function demoMultiLayers(){
   let labels = Array.from(new Uint8Array(labelsBuffer));
 
   let nameBufferPairs = _.zip(
-    ['conv1', 'conv2', 'fc1', 'fc2', 'softmax'],
-    [conv1TensorBuffer, conv2TensorBuffer, fc1TensorBuffer, fc2TensorBuffer, softmaxTensorBuffer]
+    // ['conv1', 'conv2', 'fc1', 'fc2', 'softmax'],
+    // [conv1TensorBuffer, conv2TensorBuffer, fc1TensorBuffer, fc2TensorBuffer, softmaxTensorBuffer]
+    ['fc1', 'fc2', 'softmax'],
+    [fc1TensorBuffer, fc2TensorBuffer, softmaxTensorBuffer]
     );
   let gt;
 
-  _.each(nameBufferPairs, ([name, buffer])=>{
+  _.each(nameBufferPairs, ([name, buffer], i)=>{
     console.log(name);
 
     let container = d3.select(divRoot)
     .append('div')
     .style('float', 'left')
     .node();
-    container.width = window.innerWidth/5;
-    container.height = window.innerHeight;
+    container.width = window.innerWidth/nameBufferPairs.length;
+    container.height = window.innerHeight/2;
 
-    let ndim;
-    if(name==='conv1' || name==='conv2' || name==='fc1'){
-      ndim = 20;
-    }else{
-      ndim = 10;
-    }
-
-    if(name==='conv1' || name == 'fc2'){
+    let ndim = buffer.byteLength/4/100/1000;
+    if(i==0 || name == 'fc2'){
       gt = new GrandTour({ndim: ndim, stepsize: 0.000025});
     }
-
     let tensor = math.reshape(Array.from(new Float32Array(buffer)), [100,1000,ndim]);
     let data = tensor[99];
     let dmax = math.max(data);
-
-
+    
     let xRange, yRange;
     if(container.width > container.height){
       yRange = 1.0*dmax;
@@ -122,55 +127,15 @@ function demoMultiLayers(){
     let ortho = glmatrix.mat4.create();
     glmatrix.mat4.ortho(ortho, -xRange, xRange, -yRange, yRange, -1000*yRange, 1000*yRange);
     ortho = math.reshape(Array.from(ortho), [4,4]);
-    let gtv = new GrandTourBasicView({
-      container: container,
-      data: data, 
+
+    //controller
+    let c = new GrandTourBasicController({
+      dataTensor: tensor, 
       labels: labels,
-      gt: gt,
-      camera: ortho,
-      dpr: dpr,
+      container: container, 
+      gt: gt
     });
-    gtv.animate();
-
-    let epoch = 0;
-    let nepoch = 100;
-    gtv.data = tensor[epoch];
-    window.addEventListener("keypress", ()=>{
-      if(event.key == 'n' || event.key == 'p'){
-        if(event.key == 'n'){
-          epoch += 1;
-          epoch = epoch==nepoch ? 0 : epoch;
-        }else if(event.key == 'p'){
-          epoch -= 1;
-          epoch = epoch<0 ? nepoch-1 : epoch;
-        }
-        gtv.data = tensor[epoch];
-      }
-    });
-
-    window.addEventListener('resize', ()=>{
-      container.width = window.innerWidth/5;
-      container.height = window.innerHeight;
-      gtv.resize();
-
-      if(container.width > container.height){
-        yRange = 1.1*dmax;
-        xRange = yRange * container.width / container.height;
-      }else{
-        xRange = 1.1*dmax;
-        yRange = xRange * container.height / container.width;
-      }
-
-      let ortho = glmatrix.mat4.create();
-      glmatrix.mat4.ortho(ortho, -xRange, xRange, -yRange, yRange, -1000*yRange, 1000*yRange);
-      ortho = math.reshape(Array.from(ortho),[4,4]);
-      gtv.camera = ortho;
-      glutil.uniform(gtv.gl, {
-        name: 'camera',
-        type: 'mat',
-        data: gtv.camera
-      });
-    });
+    c.play();
 
   });
 }
@@ -361,7 +326,7 @@ function demoTwoEyeCamera(){
 
   let labels = Array.from(new Uint8Array(labelsBuffer));
   let shape = [100,1000,20];
-  let dataTensor = math.reshape(Array.from(new Float32Array(softmaxTensorBuffer)), shape);
+  let dataTensor = math.reshape(Array.from(new Float32Array(conv2TensorBuffer)), shape);
   let data = dataTensor[99];
   let dmax = math.max(dataTensor[99]);
   console.log(dmax);
@@ -370,10 +335,10 @@ function demoTwoEyeCamera(){
 
   let xRange, yRange;
   if(container.width > container.height){
-    yRange = 1.1*dmax;
+    yRange = 1.0*dmax;
     xRange = yRange * container.width / container.height;
   }else{
-    xRange = 1.1*dmax;
+    xRange = 1.0*dmax;
     yRange = xRange * container.height / container.width;
   }
   let ortho = glmatrix.mat4.create();

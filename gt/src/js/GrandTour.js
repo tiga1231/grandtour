@@ -4,7 +4,7 @@ import math from 'mathjs';
 export default class GrandTour{
 	constructor({ndim, stepsize=0.00007}){
 		this.ndim = ndim;
- 		this.STEPSIZE = stepsize;
+ 		this.stepsize = stepsize;
 	}
 
 	get ndim(){
@@ -45,7 +45,7 @@ export default class GrandTour{
 	};
 
 	tick(dt=0){
-		let angles = this.thetas.map( theta => theta * dt * this.STEPSIZE );
+		let angles = this.thetas.map( theta => theta * dt * this.stepsize );
 		var k = -1;
 		for(var i=0; i<this.ndim; i++){
 			for(var j=0; j<this.ndim; j++){
@@ -61,6 +61,10 @@ export default class GrandTour{
 
 	get matrix(){
 		return this._matrix;
+	}
+
+	set matrix(newMatrix){
+		this._matrix = newMatrix;
 	}
 
 
