@@ -110,7 +110,7 @@ function demoMultiLayers(){
 
     let ndim = buffer.byteLength/4/100/1000;
     if(i==0 || name == 'fc2'){
-      gt = new GrandTour({ndim: ndim, stepsize: 0.000025});
+      gt = new GrandTour({ndim: ndim});
     }
     let tensor = math.reshape(Array.from(new Float32Array(buffer)), [100,1000,ndim]);
     let data = tensor[99];

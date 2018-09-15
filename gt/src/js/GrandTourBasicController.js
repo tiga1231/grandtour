@@ -72,7 +72,7 @@ export default class GrandTourBasicController{
     });
 
     //interactions
-    window.onkeypress = (event)=>{
+    window.addEventListener('keypress', (event)=>{
       if(event.key == 'n' || event.key == 'p'){
         if(event.key == 'n'){
           this.epoch += 1;
@@ -95,7 +95,7 @@ export default class GrandTourBasicController{
           this.slower();
         }
       }
-    };
+    });
 
 
   }
@@ -120,7 +120,6 @@ export default class GrandTourBasicController{
     }
     if(this.overlay){
       this.overlay.camera = this.camera;
-
     }
     // this.overlay.axisLength = this._range;
 
