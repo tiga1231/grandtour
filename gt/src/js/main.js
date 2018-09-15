@@ -38,8 +38,6 @@ window.onload = function(){
 	window.d3 = d3;
 	window.math = math;
   
-  // demoSingleView();
-  // demoTwoLayers();
   demoMultiLayers();
   // demoTwoEyeCamera();
   // demoController();
@@ -58,7 +56,6 @@ function demoController(){
     Array.from(new Float32Array(conv2TensorBuffer)), 
     [100,1000,conv2TensorBuffer.byteLength/4/100/1000]
   );
-
   let labels = Array.from(new Uint8Array(labelsBuffer));
   let container = d3.select('div#root')
   .append('div')
@@ -138,170 +135,6 @@ function demoMultiLayers(){
     c.play();
 
   });
-}
-
-
-function demoTwoLayers(){
-  //two views that shows two layers
-  let dpr = window.devicePixelRatio;
-  console.log('dpr:', dpr);
-  let divRoot = d3.select('div#root').node();
-
-  let conv2Container = d3.select(divRoot)
-  .append('div')
-  .style('float', 'left')
-  .node();
-  conv2Container.width = window.innerWidth/2;
-  conv2Container.height = window.innerHeight;
-
-  let softmaxContainer = d3.select(divRoot)
-  .append('div')
-  .style('float', 'left')
-  .node();
-  softmaxContainer.width = window.innerWidth/2;
-  softmaxContainer.height = window.innerHeight;
-  
-  let labels = Array.from(new Uint8Array(labelsBuffer));
-
-  let conv2Tensor = math.reshape(Array.from(new Float32Array(conv2TensorBuffer)), [100,1000,20]);
-  let conv2Data = conv2Tensor[99];
-  let conv2Dmax = math.max(conv2Data);
-
-  let softmaxTensor = math.reshape(Array.from(new Float32Array(softmaxTensorBuffer)), [100,1000,10]);
-  let softmaxData = softmaxTensor[99];
-  let softmaxDmax = math.max(softmaxTensor[99]);
-  
-  let conv2Gt = new GrandTour({ndim: 20, stepsize: 0.000025});
-  let softmaxGt = new GrandTour({ndim: 10, stepsize: 0.000025});
-
-  let xRange, yRange;
-  if(softmaxContainer.width > softmaxContainer.height){
-    yRange = 1.1*softmaxDmax;
-    xRange = yRange * softmaxContainer.width / softmaxContainer.height;
-  }else{
-    xRange = 1.1*softmaxDmax;
-    yRange = xRange * softmaxContainer.height / softmaxContainer.width;
-  }
-  let ortho = glmatrix.mat4.create();
-  glmatrix.mat4.ortho(ortho, -xRange, xRange, -yRange, yRange, -1000*yRange, 1000*yRange);
-  ortho = math.reshape(Array.from(ortho), [4,4]);
-  let softmaxGtv = new GrandTourBasicView({
-    container: softmaxContainer,
-    data: softmaxData, 
-    labels: labels,
-    gt: softmaxGt,
-    camera: ortho,
-    dpr: dpr,
-  });
-  softmaxGtv.animate();
-
-
-  if(conv2Container.width > conv2Container.height){
-    yRange = 1.1*conv2Dmax;
-    xRange = yRange * conv2Container.width / conv2Container.height;
-  }else{
-    xRange = 1.1*conv2Dmax;
-    yRange = xRange * conv2Container.height / conv2Container.width;
-  }
-  ortho = glmatrix.mat4.create();
-  glmatrix.mat4.ortho(ortho, -xRange, xRange, -yRange, yRange, -1000*yRange, 1000*yRange);
-  ortho = math.reshape(Array.from(ortho), [4,4]);
-  let conv2Gtv = new GrandTourBasicView({
-    container: conv2Container,
-    data: conv2Data, 
-    labels: labels,
-    gt: conv2Gt,
-    camera: ortho,
-    dpr: dpr,
-  });
-  conv2Gtv.animate();
-
-  // simple controller that switch epoch on key press
-  let epoch = 0;
-  let nepoch = 100;
-  softmaxGtv.data = softmaxTensor[epoch];
-  conv2Gtv.data = conv2Tensor[epoch];
-  window.onkeypress = (event)=>{
-    if(event.key == 'n' || event.key == 'p'){
-      if(event.key == 'n'){
-        epoch += 1;
-        epoch = epoch==nepoch ? 0 : epoch;
-
-      }else if(event.key == 'p'){
-        epoch -= 1;
-        epoch = epoch<0 ? nepoch-1 : epoch;
-      }
-      softmaxGtv.data = softmaxTensor[epoch];
-      conv2Gtv.data = conv2Tensor[epoch];
-
-    }
-  };
-
-
-}
-
-
-
-function demoSingleView(){
-  //single view that supports next epoch
-  let dpr = window.devicePixelRatio;
-  console.log('dpr:', dpr);
-  let divRoot = d3.select('div#root').node();
-
-  let container = d3.select(divRoot)
-  .append('div')
-  .style('float', 'left')
-  .node();
-  container.width = window.innerWidth;
-  container.height = window.innerHeight;
-
-  let labels = Array.from(new Uint8Array(labelsBuffer));
-  let shape = [100,1000,10];
-  let dataTensor = math.reshape(Array.from(new Float32Array(softmaxTensorBuffer)), shape);
-  let data = dataTensor[99];
-  let dmax = math.max(dataTensor[99]);
-  console.log(dmax);
-
-  let gt = new GrandTour({ndim: 10, stepsize: 0.00005});
-
-  let xRange, yRange;
-  if(container.width > container.height){
-    yRange = 1.1*dmax;
-    xRange = yRange * container.width / container.height;
-  }else{
-    xRange = 1.1*dmax;
-    yRange = xRange * container.height / container.width;
-  }
-  let ortho = glmatrix.mat4.create();
-  glmatrix.mat4.ortho(ortho, -xRange, xRange, -yRange, yRange, -1000*yRange, 1000*yRange);
-  ortho = math.reshape(Array.from(ortho), [4,4]);
-  
-  let gtv = new GrandTourBasicView({
-    container: container,
-    data: data, 
-    labels: labels,
-    gt: gt,
-    camera: ortho,
-    dpr: dpr,
-  });
-  // simple controller that switch epoch on key press
-  let epoch = 0;
-  let nepoch = 100;
-  gtv.data = dataTensor[epoch];
-  window.onkeypress = function(event){
-    if(event.key == 'n' || event.key == 'p'){
-      if(event.key == 'n'){
-        epoch += 1;
-        epoch = epoch==nepoch ? 0 : epoch;
-
-      }else if(event.key == 'p'){
-        epoch -= 1;
-        epoch = epoch<0 ? nepoch-1 : epoch;
-      }
-      gtv.data = dataTensor[epoch];
-    }
-  }
-  gtv.animate();
 }
 
 
