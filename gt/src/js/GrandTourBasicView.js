@@ -1,7 +1,6 @@
 import math from 'mathjs';
 import numeric from 'numeric';
 import * as d3 from 'd3';
-// import * as glutil from 'gl-util';
 import * as _ from 'underscore';
 import * as glmatrix from 'gl-matrix';
 
@@ -21,12 +20,16 @@ export default class GrandTourBasicView{
     contextAttributes}){
     this.data = data;
     this.ndim = this.data[0].length;
+    this.npoint = this.data.length;
+
     if(labels === undefined){
       this.labels = this.data.map(()=>0);
     }else{
       this.labels = labels;
     }
-    this.color = this.labels.map(i=>utils.baseColor[i]);
+
+    this.alpha = Array.from(Array(this.npoint), ()=>1);
+    this.color = this.labels.map(i=>[...utils.baseColor[i], this.alpha[i]]);
     this.container = container;
     
     this.gl = glutil.context({
@@ -82,13 +85,12 @@ export default class GrandTourBasicView{
     }, []);
 
     this.axisColor = _.range(this.ndim*2)
-    // .map(i=>utils.baseColor[Math.floor(i/2)]);
-    .map(i=>[1.0,1.0,1.0]);//white axis line
+    .map(i=>[1.0,1.0,1.0, 1.0]);//white axis line
 
     glutil.attribute(this.gl, {
       name: 'acolor', 
       type: 'float',
-      data: this.color.slice(0,this.data.length).concat(this.axisColor)
+      data: this.color.concat(this.axisColor)
     });
 
     this.then = 0;
@@ -108,7 +110,34 @@ export default class GrandTourBasicView{
     return this._camera;
   }
 
-  resize(){
+
+  set color(c){
+    this._color = c;
+    if(this.gl){
+      glutil.attribute(this.gl, {
+        name: 'acolor', 
+        type: 'float',
+        data: this.color.concat(this.axisColor)
+      });
+    }
+  }
+
+  get color(){
+    return this._color;
+  }
+
+
+  set alpha(a){
+    this._alpha = a;
+    this.color = this.labels.map(i=>[...utils.baseColor[i], this.alpha[i]]);
+  }
+
+  get alpha(){
+    return this._alpha;
+  }
+
+
+  onResize(){
     let width = this.container.width;
     let height = this.container.height;
     this.canvas.width = width * this.dpr;
@@ -151,7 +180,7 @@ export default class GrandTourBasicView{
 
 
   render(dt=0){
-    glutil.clear(this.gl, [0.15,0.15,0.15,1.0]);
+    glutil.clear(this.gl, utils.bgColor);
     //=================upload data================
     glutil.attribute(this.gl, {
       name: 'position', 

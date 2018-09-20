@@ -3,7 +3,6 @@ import style from "../css/style.css";
 import math from 'mathjs';
 import numeric from 'numeric';
 import * as d3 from 'd3';
-// import * as glutil from 'gl-util';
 import * as _ from 'underscore';
 import * as glmatrix from 'gl-matrix';
 
@@ -11,7 +10,7 @@ import utils from './utils';
 import glutil from './glutil';
 import GrandTour from './GrandTour';
 import GrandTourBasicView from './GrandTourBasicView';
-import GrandTourBasicController from './GrandTourBasicController';
+import GrandTourBasicController from './GrandTourAxisHandleController';
 
 
 const vshader = require('../glsl/gt_vertex.glsl');
@@ -20,7 +19,7 @@ const fshader = require('../glsl/gt_fragment.glsl');
 const dataset = 'fashion-mnist';
 // const conv1TensorBuffer = require('../../data/'+dataset+'/conv1_pca_100_1000_20.bin');
 // const conv2TensorBuffer = require('../../data/'+dataset+'/conv2_pca_100_1000_20.bin');
-const fc1TensorBuffer = require('../../data/'+dataset+'/fc1_pca_100_1000_20.bin');
+// const fc1TensorBuffer = require('../../data/'+dataset+'/fc1_pca_100_1000_20.bin');
 const fc2TensorBuffer = require('../../data/'+dataset+'/fc2_pca_100_1000_10.bin');
 const softmaxTensorBuffer = require('../../data/'+dataset+'/softmax_pca_100_1000_10.bin');
 const labelsBuffer = require('../../data/'+dataset+'/labels_1000.bin');
@@ -38,9 +37,10 @@ window.onload = function(){
 	window.d3 = d3;
 	window.math = math;
   
-  demoMultiLayers();
+  // demoMultiLayers();
   // demoTwoEyeCamera();
   // demoController();
+  demoBrush();
 
 };
 
@@ -51,10 +51,10 @@ window.clean = ()=>{
 }
 
 
-function demoController(){
+function demoBrush(){
   let dataTensor = math.reshape(
-    Array.from(new Float32Array(conv2TensorBuffer)), 
-    [100,1000,conv2TensorBuffer.byteLength/4/100/1000]
+    Array.from(new Float32Array(softmaxTensorBuffer)), 
+    [100,1000,softmaxTensorBuffer.byteLength/4/100/1000]
   );
   let labels = Array.from(new Uint8Array(labelsBuffer));
   let container = d3.select('div#root')
@@ -64,7 +64,31 @@ function demoController(){
   container.width = window.innerWidth;
   container.height = window.innerHeight;
 
-  let c = new GrandTourBasicController({
+  let main = new GrandTourBasicController({
+    dataTensor: dataTensor, 
+    labels: labels,
+    container: container, 
+    stepsize: 0.00005
+  });
+  main.play();
+  window.main = main;
+}
+
+
+function demoController(){
+  let dataTensor = math.reshape(
+    Array.from(new Float32Array(fc2TensorBuffer)), 
+    [100,1000,fc2TensorBuffer.byteLength/4/100/1000]
+  );
+  let labels = Array.from(new Uint8Array(labelsBuffer));
+  let container = d3.select('div#root')
+  .append('div')
+  .attr('class', 'container')
+  .node();
+  container.width = window.innerWidth;
+  container.height = window.innerHeight;
+
+  let c = new GrandTourAxisHandleController({
     dataTensor: dataTensor, 
     labels: labels,
     container: container, 

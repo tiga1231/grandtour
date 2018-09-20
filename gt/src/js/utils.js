@@ -5,6 +5,8 @@ export default class utils{
     c = d3.color(c);
     return [c.r/255, c.g/255, c.b/255];
   });
+
+  static bgColor = [0.15,0.15,0.15,1.0];
   
   static orthogonalize = function(matrix, priorityRow=0) {
     // make row vectors in matrix pairwise orthogonal;

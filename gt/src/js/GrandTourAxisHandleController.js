@@ -8,11 +8,11 @@ import utils from './utils';
 import glutil from './glutil';
 import GrandTour from './GrandTour';
 import GrandTourBasicView from './GrandTourBasicView';
-import GrandTourBasicOverlay from './GrandTourBasicOverlay';
+import GrandTourBasicOverlay from './GrandTourAxisHandleOverlay';
 
 
 
-export default class GrandTourBasicController{
+export default class GrandTourAxisHandleController{
 
   constructor({
     dataTensor, labels, container,

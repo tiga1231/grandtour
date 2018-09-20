@@ -10,7 +10,7 @@ import utils from './utils';
 
 
 
-export default class GrandTourBasicOverlay{
+export default class GrandTourAxisHandleOverlay{
   constructor({
     container, 
     gt,
