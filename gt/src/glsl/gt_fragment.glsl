@@ -1,14 +1,13 @@
 precision mediump float;
  
 varying vec4 color;
-uniform bool isDrawingAxis;
+uniform int isDrawingAxis;
 uniform float pointSize;
 
 void main () {
     gl_FragColor = color;
 
-    if(!isDrawingAxis){
-
+    if(isDrawingAxis==0){
       float dist = distance(vec2(0.5, 0.5), gl_PointCoord);
       
       float r = 0.35; //r=0.5;
@@ -23,6 +22,5 @@ void main () {
       gl_FragColor.rgb = mix(outline_color, color.rgb,
         smoothstep(0.0, 1.0, (r - dist) * 10.0)
       );
-
     }
 }

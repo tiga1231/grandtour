@@ -145,7 +145,6 @@ export default class glutil{
       let type, dim;
       if(obj.type !== undefined){
         type = obj.type;
-        
       }else if(Array.isArray(obj.data)){
         if(Array.isArray(obj.data[0])){
           type = 'mat';
@@ -159,7 +158,6 @@ export default class glutil{
           type = 'int';
         }
       }
-
 
       if(obj.dim !== undefined){
         dim = obj.dim;

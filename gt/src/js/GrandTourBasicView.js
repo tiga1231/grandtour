@@ -82,7 +82,7 @@ export default class GrandTourBasicView{
     }, []);
 
     this.axisColor = _.range(this.ndim*2)
-    .map(i=>[1.0,1.0,1.0, 1.0]);//white axis line
+    .map(i=>[1.0,1.0,1.0, 0.5]);//white axis line
 
     this.color = this.labels.map(i=>[...utils.baseColor[i], this.alpha[i]]);
 
@@ -198,14 +198,14 @@ export default class GrandTourBasicView{
     //=================draw================
     glutil.uniform(this.gl, {
       name: 'isDrawingAxis', 
-      type: 'bool',
+      type: 'int',
       data: 0
     });
     this.gl.drawArrays(this.gl.POINTS, 0, this.npoint);
 
     glutil.uniform(this.gl, {
       name: 'isDrawingAxis', 
-      type: 'bool',
+      type: 'int',
       data: 1
     });
     this.gl.drawArrays(this.gl.LINES , this.npoint, this.ndim*2);

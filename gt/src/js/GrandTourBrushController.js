@@ -69,7 +69,7 @@ export default class GrandTourBrushController extends GrandTourBaseController{
         this.view.render();
       }
       this.stopUpdateBox();
-      this.overlay.removeBox();
+      this.overlay.hideBox();
     }else{
       this.updateBox();
     }
@@ -117,103 +117,51 @@ export default class GrandTourBrushController extends GrandTourBaseController{
 
 
   onBoxDragStart(event){
-    console.log('start');
-  }
-
-  onBoxDrag(event){
-    console.log('drag');
-    let dx = event.dx;
-    let dy = event.dy;
-    console.log(dx,dy);
+    //average point as ref
     let dataSelected = this.view.data.filter((p,i)=>{
       return this.brushSelected[i];
     });
-
-    // weighted average point as ref
-    let totalNorm = numeric.norm2(dataSelected); 
-    let ref = dataSelected.reduce(
+    this.ref = dataSelected.reduce(
       (a,b)=>{
         return a.map((c,i)=>c+b[i]/dataSelected.length);
-        // return a.map((c,i)=>{
-        //   return c+b[i]*numeric.norm2(dataSelected[i])/totalNorm;
-        // });
       },
       Array.from(Array(dataSelected[0].length), ()=>0)
-    );
+    ); 
 
-
-    // //extreme point as ref
-    // let ref = Array.from(
-    //   Array(dataSelected[0].length), 
-    //   ()=>0
-    // );
-    // for(let i=0; i<dataSelected.length; i++){
-    //   if(numeric.norm2(dataSelected[i]) >= numeric.norm2(ref)){
-    //     ref = dataSelected[i];
-    //   }
-    // }
-
-
-    let argmax = -1;
-    let vmax = 0;
-    for(let i=0; i<ref.length; i++){
-      if(Math.abs(ref[i])>=vmax){
-        vmax = Math.abs(ref[i]);
-        argmax = i;
+    this.argmax = -1;
+    this.vmax = 0;
+    for(let i=0; i<this.ref.length; i++){
+      if(Math.abs(this.ref[i])>=this.vmax){
+        this.vmax = Math.abs(this.ref[i]);
+        this.argmax = i;
       }
     }
-    this.gt.matrix[argmax][0] += dx*this.dmax/ref[argmax];
-    this.gt.matrix[argmax][1] += dy*this.dmax/ref[argmax];
-    this.gt.matrix = utils.orthogonalize(this.gt.matrix, argmax);
 
+  }
 
-    // let locationDesired = this.view.points
-    // .filter((p,i)=>{
-    //   return this.brushSelected[i];
-    // })
-    // .map((p)=>{
-    //   return [p[0]+dx, p[1]+dy];
-    // });
-
-    // let svd,u,maxs,s,v;
-    // if(dataSelected.length >= dataSelected[0].length){
-    //   svd = numeric.svd(dataSelected);
-    //   u = svd.U;
-    //   s = svd.S.map(x=>x<0.0001 ? 0 : 1/x);
-    //   v = svd.V;
-    // }else{
-    //   svd = numeric.svd(numeric.transpose(dataSelected));
-    //   u = svd.V;
-    //   s = svd.S.map(x=>x<0.0001 ? 0 : 1/x);
-    //   v = svd.U;
-    // }
-    
-    // let dataSelectedInverse = numeric.dot(
-    //   numeric.dot(v, numeric.diag(s)), 
-    //   numeric.transpose(u)
-    // );
-
-
-    // let gt2 = numeric.dot(dataSelectedInverse, locationDesired);
-    // for(let i = 0; i<this.gt.matrix.length; i++){
-    //   this.gt.matrix[i][0] = gt2[i][0];
-    //   this.gt.matrix = utils.orthogonalize(this.gt.matrix, i);
-    //   this.gt.matrix[i][1] = gt2[i][1];
-    //   this.gt.matrix = utils.orthogonalize(this.gt.matrix, i);
-    // }
+  onBoxDrag(event){
+    let dx = event.dx;
+    let dy = event.dy;
+  
+    this.gt.matrix[this.argmax][0] += dx*this.dmax/this.ref[this.argmax];
+    this.gt.matrix[this.argmax][1] += dy*this.dmax/this.ref[this.argmax];
+    this.gt.matrix = utils.orthogonalize(this.gt.matrix, this.argmax);
+    this.view.alpha = this.brushSelected.map((i)=>i==true?1.0:0.1);
 
     if(!this.isGrandTourPlaying){
       this.view.render();
     }
 
 
-    // console.log(pointSelected);
-    // console.log(event);
   }
 
   onBoxDragEnd(event){
-    console.log('end');
-    console.log('==================');
+    this.stopUpdateBox();
+    this.overlay.hideBox();
+    this.view.alpha = Array.from(Array(this.npoint), ()=>1.0);
+    if(!this.isGrandTourPlaying){
+      this.view.render();
+    }
   }
 
   play(){

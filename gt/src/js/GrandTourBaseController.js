@@ -112,6 +112,9 @@ export default class GrandTourBaseController{
     }
     if(this.view){
       this.view.data = this.dataTensor[this._epoch];
+      if(!this.isGrandTourPlaying){
+        this.view.render();
+      }
     }
   }
 

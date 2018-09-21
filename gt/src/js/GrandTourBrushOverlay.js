@@ -98,7 +98,7 @@ export default class GrandTourBrushOverlay{
 
 
   showBoxAt(box){
-    
+    this.showBox();
     this.box 
     .attr('x', Math.min(this.sx(box.x0), this.sx(box.x1))-10 )
     .attr('y', Math.min(this.sy(box.y0), this.sy(box.y1))-10 )
@@ -117,10 +117,14 @@ export default class GrandTourBrushOverlay{
 
   }
 
-  removeBox(){
+  hideBox(){
     this.box 
-    .attr('width', 0)
-    .attr('height', 0);
+    .attr('display', 'none');
+  }
+
+  showBox(){
+    this.box 
+    .attr('display', '');
   }
 
 
