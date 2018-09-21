@@ -4,6 +4,7 @@ import math from 'mathjs';
 export default class GrandTour{
 	constructor({ndim, stepsize=0.00007}){
 		this.ndim = ndim;
+ 		this.stepsize0 = stepsize;
  		this.stepsize = stepsize;
 	}
 
@@ -18,6 +19,7 @@ export default class GrandTour{
     	}
 	}
 
+
 	initThetas(N){
 		this._thetas = new Array(N);
 		for(var i=0; i<N; i++){
@@ -26,9 +28,11 @@ export default class GrandTour{
 		this._matrix = math.identity(this.ndim)._data;
 	}
 
+
 	get thetas(){
 		return this._thetas;
 	}
+
 
 	rotateMatrix(matrix, i,j, theta){
 		var sin = Math.sin(theta);
@@ -43,6 +47,7 @@ export default class GrandTour{
 		}
 		return matrix;
 	};
+
 
 	tick(dt=0){
 		let angles = this.thetas.map( theta => theta * dt * this.stepsize );

@@ -9,8 +9,12 @@ import * as glmatrix from 'gl-matrix';
 import utils from './utils';
 import glutil from './glutil';
 import GrandTour from './GrandTour';
+
 import GrandTourBasicView from './GrandTourBasicView';
-import GrandTourBasicController from './GrandTourAxisHandleController';
+
+import GrandTourBaseController from './GrandTourBaseController';
+import GrandTourAxisHandleController from './GrandTourAxisHandleController';
+import GrandTourBrushController from './GrandTourBrushController';
 
 
 const vshader = require('../glsl/gt_vertex.glsl');
@@ -27,9 +31,6 @@ const labelsBuffer = require('../../data/'+dataset+'/labels_1000.bin');
 
 
 window.onload = function(){
-
-
-
 	window.glmatrix = glmatrix;
 	window.utils = utils;
 	window.glutil = glutil;
@@ -40,6 +41,7 @@ window.onload = function(){
   // demoMultiLayers();
   // demoTwoEyeCamera();
   // demoController();
+  // demoAxisHandle();
   demoBrush();
 
 };
@@ -48,6 +50,31 @@ window.onload = function(){
 
 window.clean = ()=>{
   d3.select('div#root').selectAll('div').remove();
+}
+
+
+function demoAxisHandle(){
+  let dataTensor = math.reshape(
+    Array.from(new Float32Array(softmaxTensorBuffer)), 
+    [100,1000,softmaxTensorBuffer.byteLength/4/100/1000]
+  );
+  let labels = Array.from(new Uint8Array(labelsBuffer));
+  let container = d3.select('div#root')
+  .append('div')
+  .attr('class', 'container')
+  .node();
+  container.width = window.innerWidth;
+  container.height = window.innerHeight;
+
+  let main = new GrandTourAxisHandleController({
+    dataTensor: dataTensor, 
+    labels: labels,
+    container: container, 
+    stepsize: 0.00005
+  });
+  main.view.pointSize = 10;
+  main.play();
+  window.main = main;
 }
 
 
@@ -64,15 +91,16 @@ function demoBrush(){
   container.width = window.innerWidth;
   container.height = window.innerHeight;
 
-  let main = new GrandTourBasicController({
+  let main = new GrandTourBrushController({
     dataTensor: dataTensor, 
     labels: labels,
-    container: container, 
-    stepsize: 0.00005
+    container: container,
   });
+  main.view.pointSize = 10;
   main.play();
   window.main = main;
 }
+
 
 
 function demoController(){

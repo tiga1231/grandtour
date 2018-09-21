@@ -2,6 +2,7 @@ precision mediump float;
  
 varying vec4 color;
 uniform bool isDrawingAxis;
+uniform float pointSize;
 
 void main () {
     gl_FragColor = color;
@@ -10,19 +11,19 @@ void main () {
 
       float dist = distance(vec2(0.5, 0.5), gl_PointCoord);
       
-      float eps = 0.1;
+      float r = 0.35; //r=0.5;
+      float eps = 0.5 / pointSize;
       float a = - 1.0 / (2.0*eps);
-      float b = 0.5 + 1.0/(4.0*eps);
+      float b = 0.5 + 0.5/eps * r;
       float f = a*dist + b;
       float g = smoothstep(0.0, 1.0, f);
       gl_FragColor.a = color.a * g;      
 
-      float feather = clamp(0.0, gl_FragColor.a, 10.0 * (0.5 - dist));
-      vec3 outline_color = mix(vec3(0.0, 0.0, 0.0), gl_FragColor.rgb, 0.9);
+      vec3 outline_color = mix(vec3(0.0, 0.0, 0.0), gl_FragColor.rgb, 0.85);
       gl_FragColor.rgb = mix(
         outline_color,
         gl_FragColor.rgb,
-        smoothstep(0.0, 1.0, (0.5 - dist) * 5.0)
+        smoothstep(0.0, 1.0, (r - dist) * 10.0)
       );
 
     }else{

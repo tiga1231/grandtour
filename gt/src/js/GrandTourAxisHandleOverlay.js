@@ -1,7 +1,6 @@
 import math from 'mathjs';
 import numeric from 'numeric';
 import * as d3 from 'd3';
-// import * as glutil from 'gl-util';
 import * as _ from 'underscore';
 import * as glmatrix from 'gl-matrix';
 
@@ -57,7 +56,7 @@ export default class GrandTourAxisHandleOverlay{
     .append('circle')
     .attr('class', 'handle')
     .attr('stroke', 'black')
-    .attr('opacity', 0.1)
+    .attr('opacity', 0.3)
     .attr('r', Math.min(this.container.width,this.container.height)/50)
     .merge(this.handles)
     .attr('fill', (_,i)=>{return d3.rgb(...utils.baseColor[i%utils.baseColor.length].map(d=>d*255))})

@@ -13,14 +13,17 @@ const fshader = require('../glsl/gt_fragment.glsl');
 
 
 export default class GrandTourBasicView{
-  constructor({ data, labels, gt,
-    container, 
-    dpr=1, dmax,
+  constructor({
+    container, data, labels, gt=undefined, dpr=1, dmax,
+    pointSize=6,
+    stepsize=0.0005,
     camera=math.reshape(Array.from(glmatrix.mat4.create()), [4,4]), 
     contextAttributes}){
+
     this.data = data;
     this.ndim = this.data[0].length;
     this.npoint = this.data.length;
+
 
     if(labels === undefined){
       this.labels = this.data.map(()=>0);
@@ -46,7 +49,7 @@ export default class GrandTourBasicView{
     this.program = glutil.program(this.gl, vshader, fshader);
     this.dpr = dpr;
     if(gt === undefined){
-      this.gt = new GrandTour({ndim: this.ndim, stepsize: 0.00005});
+      this.gt = new GrandTour({ndim: this.ndim, stepsize: stepsize});
     }else{
       this.gt = gt;
     }
@@ -69,12 +72,16 @@ export default class GrandTourBasicView{
       type: 'float',
       data: dpr
     });
+    this.pointSize = pointSize;
+
 
     glutil.attribute(this.gl, {
       name: 'acolor', 
       type: 'float',
       data: this.color
     });
+
+
 
     this.axisData = math.multiply(this.dmax, math.identity(this.ndim))._data
     .map((row)=>{
@@ -94,6 +101,19 @@ export default class GrandTourBasicView{
     });
 
     this.then = 0;
+  }
+
+  set pointSize(s){
+    this._pointSize = s;
+    glutil.uniform(this.gl, {
+      name: 'pointSize',
+      type: 'float',
+      data: this._pointSize
+    });
+  }
+
+  get pointSize(){
+    return this._pointSize;
   }
 
 
@@ -129,7 +149,7 @@ export default class GrandTourBasicView{
 
   set alpha(a){
     this._alpha = a;
-    this.color = this.labels.map(i=>[...utils.baseColor[i], this.alpha[i]]);
+    this.color = this.labels.map((l,i)=>[...utils.baseColor[l], this.alpha[i]]);
   }
 
   get alpha(){
@@ -181,11 +201,13 @@ export default class GrandTourBasicView{
 
   render(dt=0){
     glutil.clear(this.gl, utils.bgColor);
+    this.points = this.gt.project(this.data, dt);
+    let axisPoint = this.gt.project(this.axisData, 0);
     //=================upload data================
     glutil.attribute(this.gl, {
       name: 'position', 
       type: 'float',
-      data: this.gt.project(this.data.concat(this.axisData), dt)
+      data: this.points.concat(axisPoint)
     });
     //=================draw================
     glutil.uniform(this.gl, {
