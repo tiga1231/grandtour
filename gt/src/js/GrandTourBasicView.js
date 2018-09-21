@@ -32,7 +32,6 @@ export default class GrandTourBasicView{
     }
 
     this.alpha = Array.from(Array(this.npoint), ()=>1);
-    this.color = this.labels.map(i=>[...utils.baseColor[i], this.alpha[i]]);
     this.container = container;
     
     this.gl = glutil.context({
@@ -74,15 +73,6 @@ export default class GrandTourBasicView{
     });
     this.pointSize = pointSize;
 
-
-    glutil.attribute(this.gl, {
-      name: 'acolor', 
-      type: 'float',
-      data: this.color
-    });
-
-
-
     this.axisData = math.multiply(this.dmax, math.identity(this.ndim))._data
     .map((row)=>{
       return [math.zeros(row.length)._data, row];
@@ -94,11 +84,7 @@ export default class GrandTourBasicView{
     this.axisColor = _.range(this.ndim*2)
     .map(i=>[1.0,1.0,1.0, 1.0]);//white axis line
 
-    glutil.attribute(this.gl, {
-      name: 'acolor', 
-      type: 'float',
-      data: this.color.concat(this.axisColor)
-    });
+    this.color = this.labels.map(i=>[...utils.baseColor[i], this.alpha[i]]);
 
     this.then = 0;
   }
@@ -202,25 +188,27 @@ export default class GrandTourBasicView{
   render(dt=0){
     glutil.clear(this.gl, utils.bgColor);
     this.points = this.gt.project(this.data, dt);
-    let axisPoint = this.gt.project(this.axisData, 0);
+    this.axisPoint = this.gt.project(this.axisData, 0);
     //=================upload data================
     glutil.attribute(this.gl, {
       name: 'position', 
       type: 'float',
-      data: this.points.concat(axisPoint)
+      data: this.points.concat(this.axisPoint)
     });
     //=================draw================
     glutil.uniform(this.gl, {
       name: 'isDrawingAxis', 
+      type: 'bool',
       data: 0
     });
-    this.gl.drawArrays(this.gl.POINTS, 0, this.data.length);
+    this.gl.drawArrays(this.gl.POINTS, 0, this.npoint);
 
     glutil.uniform(this.gl, {
       name: 'isDrawingAxis', 
+      type: 'bool',
       data: 1
     });
-    this.gl.drawArrays(this.gl.LINES, this.data.length, this.ndim*2);
+    this.gl.drawArrays(this.gl.LINES , this.npoint, this.ndim*2);
   }
 
 }

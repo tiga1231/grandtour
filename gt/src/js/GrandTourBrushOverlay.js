@@ -31,6 +31,9 @@ export default class GrandTourBrushOverlay{
     this.sy = d3.scaleLinear().domain([-1,1]).range([this.container.height, 0]);
     
     this.brush = d3.brush()
+    .on('start', ()=>{
+      this.controller.onBrushStart();
+    })
     .on('brush', ()=>{
       if(d3.event.selection){
         let [x0, y0] = d3.event.selection[0];
@@ -51,16 +54,34 @@ export default class GrandTourBrushOverlay{
     this.svg.append('g')
     .attr('class', 'brush')
     .call(this.brush);
+
+    this.box = this.svg.selectAll('.brush')
+    .selectAll('.selectBox')
+    .data([0])
+    .enter()
+    .append('rect')
+    .attr('class', 'selectBox')
+    .attr('fill', '#777')
+    .attr('fill-opacity', 0.1)
+    .attr('stroke', 'orange')
+    .call(
+      d3.drag()
+      .on('start', ()=>{
+        this.controller.onBoxDragStart(d3.event);
+      })
+      .on('drag', ()=>{
+        let [dx,dy] = [d3.event.dx, d3.event.dy];
+        dx = this.sx.invert(dx)-this.sx.invert(0);
+        dy = this.sy.invert(dy)-this.sy.invert(0);
+        this.controller.onBoxDrag({dx,dy});
+      })
+      .on('end', ()=>{
+        this.controller.onBoxDragEnd(d3.event);
+      })
+    );
+
   }
 
-  // hideBrush0(){
-  //   this.svg.selectAll('.brush')
-  //   .selectAll('rect.handle, rect.selection')
-  //   .attr('x', 0)
-  //   .attr('y', 0)
-  //   .attr('width', 0)
-  //   .attr('height', 0);
-  // }
 
   hideBrush(){
     this.svg.select('.brush')
@@ -77,22 +98,23 @@ export default class GrandTourBrushOverlay{
 
 
   showBoxAt(box){
-    if(this.box === undefined){
-      this.box = this.svg.selectAll('.brush')
-      .selectAll('.selectBox')
-      .data([0])
-      .enter()
-      .append('rect')
-      .attr('class', 'selectBox')
-      .attr('fill', '#777')
-      .attr('fill-opacity', 0.3)
-      .attr('stroke', 'orange');
-    }
+    
     this.box 
-    .attr('x', Math.min(this.sx(box.x0), this.sx(box.x1)) )
-    .attr('y', Math.min(this.sy(box.y0), this.sy(box.y1)) )
-    .attr('width', Math.abs(this.sx(box.x0)-this.sx(box.x1)))
-    .attr('height', Math.abs(this.sy(box.y0)-this.sy(box.y1)));
+    .attr('x', Math.min(this.sx(box.x0), this.sx(box.x1))-10 )
+    .attr('y', Math.min(this.sy(box.y0), this.sy(box.y1))-10 )
+    .attr('width', Math.abs(this.sx(box.x0)-this.sx(box.x1))+20 )
+    .attr('height', Math.abs(this.sy(box.y0)-this.sy(box.y1))+20 );
+    // if(+this.box.attr('width') < 20){
+    //   this.box
+    //   .attr('x', this.box.attr('x')-10)
+    //   .attr('width', this.box.attr('width')+20);
+    // }
+    // if(+this.box.attr('height') < 20){
+    //   this.box
+    //   .attr('y', this.box.attr('y')-10)
+    //   .attr('height', this.box.attr('height')+20);
+    // }
+
   }
 
   removeBox(){

@@ -80,8 +80,8 @@ function demoAxisHandle(){
 
 function demoBrush(){
   let dataTensor = math.reshape(
-    Array.from(new Float32Array(softmaxTensorBuffer)), 
-    [100,1000,softmaxTensorBuffer.byteLength/4/100/1000]
+    Array.from(new Float32Array(fc2TensorBuffer)), 
+    [100,1000,fc2TensorBuffer.byteLength/4/100/1000]
   );
   let labels = Array.from(new Uint8Array(labelsBuffer));
   let container = d3.select('div#root')

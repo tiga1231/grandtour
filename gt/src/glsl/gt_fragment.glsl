@@ -19,14 +19,10 @@ void main () {
       float g = smoothstep(0.0, 1.0, f);
       gl_FragColor.a = color.a * g;      
 
-      vec3 outline_color = mix(vec3(0.0, 0.0, 0.0), gl_FragColor.rgb, 0.85);
-      gl_FragColor.rgb = mix(
-        outline_color,
-        gl_FragColor.rgb,
+      vec3 outline_color = mix(vec3(0.0, 0.0, 0.0), color.rgb, 0.85);
+      gl_FragColor.rgb = mix(outline_color, color.rgb,
         smoothstep(0.0, 1.0, (r - dist) * 10.0)
       );
 
-    }else{
-      gl_FragColor.a = 0.5;
     }
 }
