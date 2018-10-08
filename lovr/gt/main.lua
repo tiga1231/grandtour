@@ -1,4 +1,42 @@
+local linalg  = require "lib/linalg"
+local utils  = require "lib/utils"
+local Grandtour  = require "lib/gt"
+
+local dataraw, dataTensor, labelraw, labels
+local baseColors = {
+	{166/255.0,206/255.0,227/255.0},
+	{31/255.0,120/255.0,180/255.0},
+	{178/255.0,223/255.0,138/255.0},
+	{51/255.0,160/255.0,44/255.0},
+	{251/255.0,154/255.0,153/255.0},
+	{227/255.0,26/255.0,28/255.0},
+	{253/255.0,191/255.0,111/255.0},
+	{255/255.0,127/255.0,0/255.0},
+	{202/255.0,178/255.0,214/255.0},
+	{106/255.0,61/255.0,154/255.0}
+};
+
 function lovr.load()
+	print('hello')
+	dataRaw = assert(io.open('gt/data/softmax.bin', 'rb'))
+	labelRaw = assert(io.open('gt/data/labels.bin', 'rb'))
+	dataTensor = {}
+	for epoch=1,100 do
+		dataTensor[epoch] = {}
+		for i=1,1000 do
+			dataTensor[epoch][i] = {}
+			for j=1,10 do
+				local d = dataRaw:read(4)
+				print(d)
+				dataTensor[epoch][i][j] = utils.toFloat(d)
+			end
+		end
+	end
+	labels = {}
+	for i=1,1000 do
+		local l = labelRaw:read(1)
+		labels[i] = utils.toInt(l)
+	end
 	-- shader = lovr.graphics.newShader([[
 	-- out vec3 vNormal; // This gets passed to the fragment shader
 	-- vec4 position(mat4 projection, mat4 transform, vec4 vertex) {
@@ -13,46 +51,35 @@ function lovr.load()
 	-- }
 	-- ]])
 	-- lovr.graphics.setShader(shader)
-
 end
 
-local x,y,z
-local t=0
-local data = {}
-local color = {}
-for i=1,100 do
-	data[i] = {math.random()-0.5, math.random()-0.5, math.random()-0.5}
-	color[i] = {math.random(), math.random(), math.random()}
-end
-
+local gt = Grandtour:new(10,0.5)
 function lovr.update(dt)
-	t = t+dt
+	gt:tick(dt)
 end
 
 function lovr.draw()
 
 	-- Point
-	lovr.graphics.setPointSize(5)
+	lovr.graphics.setPointSize(50)
 	lovr.graphics.setColor(1, 1, 1)
 	controllers = lovr.headset.getControllers()
 	
+	local points = gt:project(dataTensor[100])
 
-	for i=1,100 do
-		point = data[i]
-		point = {
-			0.4*(point[1]*math.cos(t)+point[2]*math.sin(t)), 
-			0.4*(point[3]),
-			0.4*(-point[1]*math.sin(t)+point[2]*math.cos(t)), 
-		}
-		c = color[i]
+	for i=1,1000 do
+		local point = points[i]
+		local c = baseColors[labels[i]+1]
 		lovr.graphics.setColor(c[1], c[2], c[3])
 
 		for _, controller in ipairs(controllers) do
 			cx, cy, cz = controller:getPosition()
-			lovr.graphics.sphere(cx+point[1], cy+point[2], cz+point[3], 0.02)
+			lovr.graphics.sphere(cx+point[1], cy+point[2], cz+point[3], 0.01)
 			break
 		end
 
-		-- lovr.graphics.points(point[1], point[2], point[3])
 	end
+
+	-- lovr.graphics.print(points[1][1], 0, 1,-1)
+
 end
