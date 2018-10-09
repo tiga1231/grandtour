@@ -3,21 +3,16 @@ local utils  = require "lib/utils"
 local Grandtour  = require "lib/gt"
 
 local dataraw, dataTensor, labelraw, labels
-local baseColors = {
-	{166/255.0,206/255.0,227/255.0},
-	{31/255.0,120/255.0,180/255.0},
-	{178/255.0,223/255.0,138/255.0},
-	{51/255.0,160/255.0,44/255.0},
-	{251/255.0,154/255.0,153/255.0},
-	{227/255.0,26/255.0,28/255.0},
-	{253/255.0,191/255.0,111/255.0},
-	{255/255.0,127/255.0,0/255.0},
-	{202/255.0,178/255.0,214/255.0},
-	{106/255.0,61/255.0,154/255.0}
-};
+local epoch = 1
+local msg = '<debug message>'
+local axisData = linalg.eye(10,10)
+local axis, handling
+
+local cx0, cy0, cz0 = 0,0,0
+local dx, dy, dz = 0, 1.5,-0.1
+local dmax = -1;
 
 function lovr.load()
-	print('hello')
 	dataRaw = assert(io.open('gt/data/softmax.bin', 'rb'))
 	labelRaw = assert(io.open('gt/data/labels.bin', 'rb'))
 	dataTensor = {}
@@ -27,8 +22,11 @@ function lovr.load()
 			dataTensor[epoch][i] = {}
 			for j=1,10 do
 				local d = dataRaw:read(4)
-				print(d)
-				dataTensor[epoch][i][j] = utils.toFloat(d)
+				local f = utils.toFloat(d)
+				if math.abs(f) > dmax then 
+					dmax = f
+				end
+				dataTensor[epoch][i][j] = f
 			end
 		end
 	end
@@ -53,33 +51,91 @@ function lovr.load()
 	-- lovr.graphics.setShader(shader)
 end
 
-local gt = Grandtour:new(10,0.5)
+local gt = Grandtour:new(10,0.3)
 function lovr.update(dt)
 	gt:tick(dt)
+	if handling~= nil then
+		local controllers = lovr.headset.getControllers()
+		if controllers ~=nil then
+			local controller = controllers[1]
+			local cx, cy, cz = controller:getPosition()
+			gt.matrix[handling][1] = cx-dx
+			gt.matrix[handling][2] = cy-dy
+			gt.matrix[handling][3] = cz-dz
+		end
+
+	end
 end
 
 function lovr.draw()
 
-	-- Point
-	lovr.graphics.setPointSize(50)
-	lovr.graphics.setColor(1, 1, 1)
 	controllers = lovr.headset.getControllers()
-	
-	local points = gt:project(dataTensor[100])
-
-	for i=1,1000 do
-		local point = points[i]
-		local c = baseColors[labels[i]+1]
-		lovr.graphics.setColor(c[1], c[2], c[3])
-
-		for _, controller in ipairs(controllers) do
-			cx, cy, cz = controller:getPosition()
-			lovr.graphics.sphere(cx+point[1], cy+point[2], cz+point[3], 0.01)
-			break
-		end
-
+	for _, controller in ipairs(controllers) do
+		cx, cy, cz = controller:getPosition()
+		lovr.graphics.setColor(0.5,0.5,0.5)
+		lovr.graphics.sphere(cx,cy,cz, 0.01)
+	end
+	-- Point
+	axis = gt:project(axisData)
+	for i=1,10 do
+		local q = axis[i]
+		local c = utils.baseColors[i]
+		lovr.graphics.setColor(.2, .2, .2, 1.0)
+		lovr.graphics.line(
+			dx, dy, dz, 
+			q[1]+dx, q[2]+dy, q[3]+dz
+		)
+	end
+	for i=1,10 do
+		local q = axis[i]
+		local c = utils.baseColors[i]
+		lovr.graphics.setColor(c[1], c[2], c[3], 1.0)
+		lovr.graphics.sphere(q[1]+dx, q[2]+dy, q[3]+dz, 0.02)
 	end
 
-	-- lovr.graphics.print(points[1][1], 0, 1,-1)
 
+	lovr.graphics.setPointSize(50)
+	local points = gt:project(dataTensor[epoch])
+	for i=1,1000 do
+		local point = points[i]
+		local c = utils.baseColors[labels[i]+1]
+		lovr.graphics.setColor(c[1], c[2], c[3])
+		lovr.graphics.sphere(point[1]/dmax+dx, point[2]/dmax+dy, point[3]/dmax+dz, 0.003)
+	end
+
+	
+	lovr.graphics.print(msg, 0, 1,-5)
+end
+
+function lovr.controllerpressed(controller, button)
+	if button == 'touchpad' then
+		local x = controller:getAxis('touchx')
+		local y = controller:getAxis('touchy')
+		if x>0 then
+			epoch = epoch + 1
+			if epoch > 100 then
+				epoch = 1
+			end
+		else
+			epoch = epoch - 1
+			if epoch < 1 then
+				epoch = 100
+			end
+		end
+	elseif button == 'trigger' then
+		local cx,cy,cz = controller:getPosition()
+		for i=1,10 do
+			if linalg.distance({cx-dx,cy-dy,cz-dz}, axis[i]) < 0.1 then
+				handling = i
+				break
+			end
+		end
+		msg = tostring(handling)
+	end
+end
+
+function lovr.controllerreleased(controller, button)
+  if button == 'trigger' then
+		handling = nil
+	end
 end

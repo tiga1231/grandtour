@@ -52,5 +52,11 @@ function linalg.eye(dim0, dim1)
 	return ret
 end
 
-
+function linalg.distance(v1, v2)
+	distSqaure = 0
+	for i=1,#v1 do
+		distSqaure = distSqaure + (v1[i]-v2[i])^2
+	end
+	return math.sqrt(distSqaure)
+end
 return linalg

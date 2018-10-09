@@ -15,7 +15,7 @@ function Grandtour:new(ndim, stepsize)
 	for i=1,ndim do
 		ret.thetas[i] = {}
 		for j=1,ndim do
-			ret.thetas[i][j] = math.random()
+			ret.thetas[i][j] = math.random()-0.5
 		end
 	end
 	return ret
@@ -49,6 +49,11 @@ end
 
 function Grandtour:project(data)
 	self.points = linalg.dot(data, self.matrix)
+	-- for i=1,#self.points do
+	-- 	self.points[i][1], self.points[i][3] = 
+	-- 	self.points[i][1]*math.cos(self.t) + self.points[i][3]*math.sin(self.t),
+	-- 	self.points[i][3]*math.cos(self.t) - self.points[i][1]*math.sin(self.t)
+	-- end
 	return self.points
 end
 
