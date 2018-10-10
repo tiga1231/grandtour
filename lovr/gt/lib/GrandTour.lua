@@ -1,8 +1,8 @@
 local linalg = require('lib/linalg')
 
-local Grandtour = {}
+local GrandTour = {}
 
-function Grandtour:new(ndim, stepsize)
+function GrandTour:new(ndim, stepsize)
 	local ret = {}
 	setmetatable(ret, self)
     self.__index = self
@@ -37,7 +37,7 @@ function _rotate(matrix, i,j, theta)
 	return matrix
 end	
 
-function Grandtour:tick(dt)
+function GrandTour:tick(dt)
 	self.t = self.t + dt
 	for i=1,self.ndim do
 		for j=i+1,self.ndim do
@@ -47,13 +47,8 @@ function Grandtour:tick(dt)
 	return self.matrix
 end
 
-function Grandtour:project(data)
+function GrandTour:project(data)
 	self.points = linalg.dot(data, self.matrix)
-	-- for i=1,#self.points do
-	-- 	self.points[i][1], self.points[i][3] = 
-	-- 	self.points[i][1]*math.cos(self.t) + self.points[i][3]*math.sin(self.t),
-	-- 	self.points[i][3]*math.cos(self.t) - self.points[i][1]*math.sin(self.t)
-	-- end
 	return self.points
 end
 
@@ -77,4 +72,4 @@ end
 -- 	print(gt.matrix[1][1])
 -- end
 
-return Grandtour
+return GrandTour

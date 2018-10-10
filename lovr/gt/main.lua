@@ -1,20 +1,23 @@
 local linalg  = require "lib/linalg"
 local utils  = require "lib/utils"
-local Grandtour  = require "lib/gt"
+local GrandTour  = require "lib/GrandTour"
 
 local dataraw, dataTensor, labelraw, labels
 local epoch = 1
 local msg = '<debug message>'
-local axisData = linalg.eye(10,10)
-local axis, handling
 
+handlings = {left=nil, right=nil, unknown=nil}
 local cx0, cy0, cz0 = 0,0,0
-local dx, dy, dz = 0, 1.5,-0.1
-local dmax = -1;
+local dx, dy, dz = 0, 1.0,-0.2
+local dmax = -1
+local maxRange = 0.5
+
+local axisData = linalg.mul(linalg.eye(10,10), maxRange)
+local axis
 
 function lovr.load()
-	dataRaw = assert(io.open('gt/data/softmax.bin', 'rb'))
-	labelRaw = assert(io.open('gt/data/labels.bin', 'rb'))
+	dataRaw = assert(io.open('gt/data/fashion-mnist/softmax.bin', 'rb'))
+	labelRaw = assert(io.open('gt/data/fashion-mnist/labels.bin', 'rb'))
 	dataTensor = {}
 	for epoch=1,100 do
 		dataTensor[epoch] = {}
@@ -51,23 +54,25 @@ function lovr.load()
 	-- lovr.graphics.setShader(shader)
 end
 
-local gt = Grandtour:new(10,0.3)
+local gt = GrandTour:new(10,0.3)
 function lovr.update(dt)
 	gt:tick(dt)
-	if handling~= nil then
-		local controllers = lovr.headset.getControllers()
-		if controllers ~=nil then
-			local controller = controllers[1]
-			local cx, cy, cz = controller:getPosition()
-			gt.matrix[handling][1] = cx-dx
-			gt.matrix[handling][2] = cy-dy
-			gt.matrix[handling][3] = cz-dz
+	local controllers = lovr.headset.getControllers()
+	if controllers ~=nil then
+		for i,controller in ipairs(controllers) do
+			if handlings[controller:getHand()] ~= nil then
+				local cx, cy, cz = controller:getPosition()
+				gt.matrix[handlings[controller:getHand()]][1] = (cx-dx)/maxRange
+				gt.matrix[handlings[controller:getHand()]][2] = (cy-dy)/maxRange
+				gt.matrix[handlings[controller:getHand()]][3] = (cz-dz)/maxRange
+				gt.matrix = linalg.orthogonalize(gt.matrix, handlings[controller:getHand()])
+			end
 		end
-
 	end
 end
 
 function lovr.draw()
+	lovr.graphics.setPointSize(50)
 
 	controllers = lovr.headset.getControllers()
 	for _, controller in ipairs(controllers) do
@@ -77,40 +82,38 @@ function lovr.draw()
 	end
 	-- Point
 	axis = gt:project(axisData)
-	for i=1,10 do
-		local q = axis[i]
-		local c = utils.baseColors[i]
-		lovr.graphics.setColor(.2, .2, .2, 1.0)
-		lovr.graphics.line(
-			dx, dy, dz, 
-			q[1]+dx, q[2]+dy, q[3]+dz
-		)
-	end
+	-- lovr.graphics.setColor(1,1,1)
+	-- for i=1,10 do
+	-- 	q = gt.matrix[i]
+	-- end
+	-- msg = tostring(dx+axis[1][1]).. ', \n'..tostring(dx+axis[1][2])..', \n'..tostring(dz+axis[1][3])..'\n\n'..tostring(dx+axis[2][1]).. ', \n'..tostring(dx+axis[2][2])..', \n'..tostring(dz+axis[2][3])
+
+
 	for i=1,10 do
 		local q = axis[i]
 		local c = utils.baseColors[i]
 		lovr.graphics.setColor(c[1], c[2], c[3], 1.0)
 		lovr.graphics.sphere(q[1]+dx, q[2]+dy, q[3]+dz, 0.02)
+		lovr.graphics.setColor(c[1], c[2], c[3], 1.01)
+		lovr.graphics.cylinder(dx, dy, dz, q[1]+dx, q[2]+dy, q[3]+dz, 0.002,0.002, false, 6)
+
 	end
 
 
-	lovr.graphics.setPointSize(50)
 	local points = gt:project(dataTensor[epoch])
 	for i=1,1000 do
 		local point = points[i]
 		local c = utils.baseColors[labels[i]+1]
 		lovr.graphics.setColor(c[1], c[2], c[3])
-		lovr.graphics.sphere(point[1]/dmax+dx, point[2]/dmax+dy, point[3]/dmax+dz, 0.003)
+		lovr.graphics.sphere(point[1]/dmax*maxRange+dx, point[2]/dmax*maxRange+dy, point[3]/dmax*maxRange+dz, 0.003)
 	end
-
-	
 	lovr.graphics.print(msg, 0, 1,-5)
 end
 
-function lovr.controllerpressed(controller, button)
+function lovr.controllerpressed(controller0, button)
 	if button == 'touchpad' then
-		local x = controller:getAxis('touchx')
-		local y = controller:getAxis('touchy')
+		local x = controller0:getAxis('touchx')
+		local y = controller0:getAxis('touchy')
 		if x>0 then
 			epoch = epoch + 1
 			if epoch > 100 then
@@ -123,19 +126,22 @@ function lovr.controllerpressed(controller, button)
 			end
 		end
 	elseif button == 'trigger' then
-		local cx,cy,cz = controller:getPosition()
+		local cx,cy,cz = controller0:getPosition()
+		local hand = controller0:getHand()
+		handlings[hand] = nil
 		for i=1,10 do
 			if linalg.distance({cx-dx,cy-dy,cz-dz}, axis[i]) < 0.1 then
-				handling = i
+				handlings[hand] = i
 				break
 			end
 		end
-		msg = tostring(handling)
+		msg = tostring(handlings.left) .. ', ' .. tostring(handlings.right)
+		-- msg = tostring(hand)
 	end
 end
 
 function lovr.controllerreleased(controller, button)
   if button == 'trigger' then
-		handling = nil
+		handlings[controller:getHand()] = nil
 	end
 end
