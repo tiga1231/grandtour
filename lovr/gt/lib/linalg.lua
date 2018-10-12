@@ -184,12 +184,23 @@ function linalg.orthogonalize(matrix, priorityRow)
 end
 
 
--- test
-matrix = {{1,2},{3,4}}
-res = linalg.orthogonalize(matrix)
-for i=1,2 do
-	print(matrix[i][1], matrix[i][2])
+function linalg.mix(x,y,px)
+	local py = 1-px
+	res = {}
+	for i=1,#x do
+		res[i] = {}
+		for j=1,#x[1] do
+			res[i][j] = px*x[i][j] + py*y[i][j]
+		end
+	end
+	return res
 end
+-- test
+-- matrix = {{1,2},{3,4}}
+-- res = linalg.orthogonalize(matrix)
+-- for i=1,2 do
+-- 	print(matrix[i][1], matrix[i][2])
+-- end
 
 
 return linalg
