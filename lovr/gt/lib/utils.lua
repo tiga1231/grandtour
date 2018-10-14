@@ -1,4 +1,14 @@
 local utils = {}
+utils.logfile = assert(io.open('./log.txt', 'w'))
+
+function utils.log(...)
+  -- utils.logfile:write('--- ', lovr.timer.getTime(), ' ---', '\n')
+  for i,v in ipairs({...}) do
+    utils.logfile:write(v, '\t')
+  end
+  utils.logfile:write('\n')
+end
+
 
 function utils.toFloat(str)
   -- Change to b4,b3,b2,b1 to unpack an LSB float
