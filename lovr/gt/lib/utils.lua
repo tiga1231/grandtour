@@ -1,4 +1,5 @@
 local utils = {}
+
 utils.logfile = assert(io.open('./log.txt', 'w'))
 
 function utils.log(...)
@@ -9,11 +10,10 @@ function utils.log(...)
   utils.logfile:write('\n')
 end
 
-
-function utils.toFloat(str)
+function utils.parseFloat32(bytes)
   -- Change to b4,b3,b2,b1 to unpack an LSB float
   -- local b1,b2,b3,b4 = string.byte(str, 1, 4)
-  local b4,b3,b2,b1 = string.byte(str, 1, 4)
+  local b4,b3,b2,b1 = string.byte(bytes, 1, 4)
 
   local exponent = (b1 % 128) * 2 + math.floor(b2 / 128)
   if exponent == 0 then return 0 end
@@ -23,11 +23,18 @@ function utils.toFloat(str)
   return math.ldexp(mantissa, exponent - 127)
 end
 
-function utils.toInt(b)
-  -- Change to b4,b3,b2,b1 to unpack an LSB float
-  local b1 = string.byte(b, 1, 1)
+
+function utils.parseInt32(bytes)
+  local b4,b3,b2,b1 = string.byte(bytes, 1, 4)
+  return (b1* 2^16) + (b2* 2^8) + (b3* 2^4) + b4
+end
+
+
+function utils.parseInt8(bytes)
+  local b1 = string.byte(bytes, 1, 1)
   return b1
 end
+
 
 utils.baseColors = {
   {0.12156862745098039, 0.4666666666666667, 0.7058823529411765},

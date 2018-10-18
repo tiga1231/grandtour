@@ -5,23 +5,36 @@ local GrandTour  = require "lib/GrandTour"
 local dpr = 1.0
 local maxRange = 0.5
 
-local dataraw, dataTensor, labelraw, labels
+local dataFile, dataTensor, labelFile, labels
 local epoch = 1
 local msg = ''
 
 local handlings = {left=nil, right=nil, unknown=nil}
 local dx, dy, dz = 0, 1.0,-0.2
-
-
 local dmax = -1
 
-local nepoch = 100
-local npoint = 1000
-local ndim = 10
+-- local labelFileName = 'gt/data/fashion-mnist/labels.bin'
+-- local dataFileName = 'gt/data/fashion-mnist/softmax.bin'
+-- local nepoch = 100
+-- local npoint = 1000
+-- local ndim = 10
+-- local dataParser = {nbyte=4, parse=utils.parseFloat32}
+-- local labelParser = {nbyte=1, parse=utils.parseInt8}
+
+
+local edgeFileName = 'gt/data/tesseract/edges_32_2_int32.bin'
+local nodeFileName = 'gt/data/tesseract/nodes_16_4_float32.bin'
+local nepoch = 1
+local npoint = 16
+local nedge = 32
+local ndim = 4
+local nodeParser = {nbyte=4, parse=utils.parseFloat32}
+local edgeParser = {nbyte=4, parse=utils.parseInt32}
+
 
 local axisHandleRadius = 0.02
-local axisData = linalg.mul(linalg.eye(ndim,ndim), 1)
-local axis
+local axisData = linalg.eye(ndim,ndim)
+local axis, points
 
 local isGrandTourPlaying = true
 local isAutoNextEpoch = true
@@ -68,46 +81,75 @@ end
 
 
 function lovr.load()
-	labelRaw = assert(io.open('gt/data/fashion-mnist/labels.bin', 'rb'))
-	utils.log('load')
-
-	labelPairs = {}
-	for i=1,npoint do
-		local l = labelRaw:read(1)
-		labelPairs[i] = {i, utils.toInt(l)}
-	end
-	table.sort(labelPairs, function(a,b) return a[2] < b[2] end)
-	labels = {}
-	for i=1,npoint do
-		labels[i] = labelPairs[i][2]
-	end
-
-	dataRaw = assert(io.open('gt/data/fashion-mnist/softmax.bin', 'rb'))
-	local dataTensor0 = {}
-	for epoch=1,nepoch do
-		dataTensor0[epoch] = {}
+	if dataFileName and labelFileName then
+		labelFile = assert(io.open(labelFileName, 'rb'))
+		utils.log('load')
+		labelPairs = {}
 		for i=1,npoint do
-			dataTensor0[epoch][i] = {}
-			for j=1,ndim do
-				local d = dataRaw:read(4)
-				local f = utils.toFloat(d)
-				if math.abs(f) > dmax then 
-					dmax = f
+			local l = labelFile:read(labelParser.nbyte)
+			labelPairs[i] = {i, labelParser.parse(l)}
+		end
+
+		table.sort(labelPairs, function(a,b) return a[2] < b[2] end)
+		labels = {}
+		for i=1,npoint do
+			labels[i] = labelPairs[i][2]
+		end
+
+		dataFile = assert(io.open(dataFileName, 'rb'))
+		local dataTensor0 = {}
+		for epoch=1,nepoch do
+			dataTensor0[epoch] = {}
+			for i=1,npoint do
+				dataTensor0[epoch][i] = {}
+				for j=1,ndim do
+					local d = dataFile:read(dataParser.nbyte)
+					local f = dataParser.parse(d)
+					if math.abs(f) > dmax then 
+						dmax = f
+					end
+					dataTensor0[epoch][i][j] = f
 				end
-				dataTensor0[epoch][i][j] = f
+			end
+		end
+		-- order data by label number
+		dataTensor = {}
+		for epoch=1,nepoch do
+			dataTensor[epoch] = {}
+			for i=1,npoint do
+				dataTensor[epoch][i] = {}
+					dataTensor[epoch][i] = dataTensor0[epoch][labelPairs[i][1]]
 			end
 		end
 	end
-	-- order data by label number
-	dataTensor = {}
-	for epoch=1,nepoch do
-		dataTensor[epoch] = {}
-		for i=1,npoint do
-			dataTensor[epoch][i] = {}
-				dataTensor[epoch][i] = dataTensor0[epoch][labelPairs[i][1]]
-		end
-	end
 
+	if nodeFileName and edgeFileName then
+		edgeFile = assert(io.open('tesseract/data/edges_32_2_int32.bin', 'rb'))
+		edges = {}
+		for i=1,nedge do
+			local i1 = edgeFile:read(4)
+			local i2 = edgeFile:read(4)
+			edges[i] = {utils.parseInt32(i1), utils.parseInt32(i2)}
+		end
+
+		nodeFile = assert(io.open('tesseract/data/nodes_16_4_float32.bin', 'rb'))
+		nodes = {}
+		labels = {}
+		for i=1,npoint do
+			nodes[i] = {}
+			labels[i] = 0
+			for j=1,4 do
+				local d = nodeFile:read(4)
+				local f = utils.parseFloat32(d)
+				if math.abs(f) > dmax then 
+					dmax = f
+				end
+				nodes[i][j] = f
+			end
+		end
+		dataTensor = { nodes, }
+	end
+	dmax = dmax * 4
 	setWorldTransform({
 		translate={dx,dy,dz}, 
 		scale={maxRange/dmax, maxRange/dmax, maxRange/dmax}
@@ -192,9 +234,7 @@ function lovr.update(dt)
 	end
 
 
-	if isGrandTourPlaying then
-		gt:tick(dt)
-	end
+	
 
 
 	if isAutoNextEpoch then
@@ -229,6 +269,12 @@ function lovr.update(dt)
 			end
 		end
 	end
+
+	if isGrandTourPlaying then
+		gt:tick(dt)
+	end
+	axis = gt:project(axisData)
+	points = gt:project(interpolate(dataTensor,epoch))
 		
 
 	-- msg = string.format('epoch: %.0f, left: %s, right: %s', epoch, handlings.left, handlings.right)
@@ -291,7 +337,6 @@ function lovr.draw()
 	-- handles, axes
 	lovr.graphics.setWireframe(false)
 	lovr.graphics.setShader(shader)
-	axis = gt:project(axisData)
 	for i=1,ndim do
 		local q = axis[i]
 		local c = utils.baseColors[i]
@@ -311,7 +356,6 @@ function lovr.draw()
 
 	-- points
 	lovr.graphics.setWireframe(false)
-	local points = gt:project(interpolate(dataTensor,epoch))
 	local c0 = nil
 	for i=1,npoint do
 		local point = points[i]
@@ -324,6 +368,20 @@ function lovr.draw()
 		local x,y,z = worldTransform:transformPoint(point[1],point[2],point[3])
 		lovr.graphics.sphere(x,y,z, 0.003)
 	end
+
+
+	if edges then
+		local c = utils.baseColors[1]
+		lovr.graphics.setColor(c[1], c[2], c[3])
+		for i=1,nedge do
+			local p1 = points[edges[i][1]+1]
+			local p2 = points[edges[i][2]+1]
+			local x1,y1,z1 = worldTransform:transformPoint(p1[1], p1[2], p1[3])
+			local x2,y2,z2 = worldTransform:transformPoint(p2[1], p2[2], p2[3])
+			lovr.graphics.cylinder(x1,y1,z1,x2,y2,z2, 0.003, 0.003, false)
+		end
+	end
+
 	lovr.graphics.setShader(nil)
 	lovr.graphics.print(msg, 0, 1,-5)
 end
