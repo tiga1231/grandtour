@@ -24,9 +24,18 @@ const dataset = 'fashion-mnist';
 // const conv1TensorBuffer = require('../../data/'+dataset+'/conv1_pca_100_1000_20.bin');
 // const conv2TensorBuffer = require('../../data/'+dataset+'/conv2_pca_100_1000_20.bin');
 // const fc1TensorBuffer = require('../../data/'+dataset+'/fc1_pca_100_1000_20.bin');
-const fc2TensorBuffer = require('../../data/'+dataset+'/fc2_pca_100_1000_10.bin');
-const softmaxTensorBuffer = require('../../data/'+dataset+'/softmax_pca_100_1000_10.bin');
-const labelsBuffer = require('../../data/'+dataset+'/labels_1000.bin');
+// const fc2TensorBuffer = require('../../data/'+dataset+'/fc2_pca_100_1000_10.bin');
+// const softmaxTensorBuffer = require('../../data/'+dataset+'/softmax_pca_100_1000_10.bin');
+// const lossMatrixBuffer = require('../../data/'+dataset+'/loss_100_1000.bin');
+// const labelsBuffer = require('../../data/'+dataset+'/labels_1000.bin');
+
+const softmaxTensorBuffer = require('../../data/'+'sigmoid_mnist'+'/softmax.bin');
+const labelsBuffer = require('../../data/'+'sigmoid_mnist'+'/labels.bin');
+
+
+// const dataset = 'autoencoder_mnist';
+// const autoencoderTensorBuffer = require('../../data/'+dataset+'/enc_testset.bin');
+// const labelsBuffer = require('../../data/'+dataset+'/labels.bin');
 
 
 
@@ -41,15 +50,64 @@ window.onload = function(){
   // demoMultiLayers();
   // demoTwoEyeCamera();
   // demoController();
-  // demoAxisHandle();
-  demoBrush();
-
+  demoAxisHandle();
+  // demoBrush();
+  // demoBasicView();
 };
 
 
 
 window.clean = ()=>{
   d3.select('div#root').selectAll('div').remove();
+}
+
+
+function demoBasicView(){
+  let epoch = 99;
+  let nepoch = 100;
+  let npoint = 10000;
+  let buffer = autoencoderTensorBuffer;
+
+  let dataTensor = math.reshape(
+    Array.from(new Float32Array(buffer)), 
+    [nepoch,npoint,buffer.byteLength/4/nepoch/npoint]
+  );
+  // let scalarMatrix = math.reshape(Array.from(new Float32Array(lossMatrixBuffer)),
+    // [100,1000]);
+  let labels = Array.from(new Uint8Array(labelsBuffer));
+
+
+  let container = d3.select('div#root')
+  .append('div')
+  .attr('class', 'container')
+  .node();
+  container.width = window.innerWidth;
+  container.height = window.innerHeight;
+
+  let main = new GrandTourBasicView({
+    data: dataTensor[epoch], 
+    labels: labels,
+    // scalars: scalarMatrix[epoch],
+    container: container, 
+    stepsize: 0.00005,
+    pointSize: 10.
+  });
+  main.play();
+  window.main = main;
+  window.onkeypress = (event)=>{
+    if(event.key == 'n' || event.key == 'p'){
+      if(event.key == 'n'){
+        epoch += 1;
+        epoch = epoch==nepoch ? 0 : epoch;
+      }else if(event.key == 'p'){
+        epoch -= 1;
+        epoch = epoch<0 ? nepoch-1 : epoch;
+      }
+      main.data = dataTensor[epoch];
+      // main.scalars = scalarMatrix[epoch];
+
+    }
+  };
 }
 
 
@@ -99,16 +157,25 @@ function demoBrush(){
   main.view.pointSize = 10;
   main.play();
   window.main = main;
+
+  
 }
 
 
 
 function demoController(){
+  let epoch = 99;
+  let nepoch = 100;
+  let npoint = 10000;
+  let buffer = autoencoderTensorBuffer;
+
   let dataTensor = math.reshape(
-    Array.from(new Float32Array(fc2TensorBuffer)), 
-    [100,1000,fc2TensorBuffer.byteLength/4/100/1000]
+    Array.from(new Float32Array(buffer)), 
+    [nepoch,npoint,buffer.byteLength/4/nepoch/npoint]
   );
+  // dataTensor = dataTensor.map(dataMatrix=>dataMatrix.slice(0,1000));
   let labels = Array.from(new Uint8Array(labelsBuffer));
+
   let container = d3.select('div#root')
   .append('div')
   .attr('class', 'container')
@@ -123,7 +190,7 @@ function demoController(){
     stepsize: 0.00005
   });
   c.play();
-  window.controller = c;
+  window.c = c;
 
 }
 
@@ -210,13 +277,13 @@ function demoTwoEyeCamera(){
   container2.height = window.innerHeight;
 
   let labels = Array.from(new Uint8Array(labelsBuffer));
-  let shape = [100,1000,20];
-  let dataTensor = math.reshape(Array.from(new Float32Array(conv2TensorBuffer)), shape);
+  let shape = [100,1000,10];
+  let dataTensor = math.reshape(Array.from(new Float32Array(softmaxTensorBuffer)), shape);
   let data = dataTensor[99];
   let dmax = math.max(dataTensor[99]);
   console.log(dmax);
 
-  let gt = new GrandTour({ndim: 20, stepsize: 0.00015});
+  let gt = new GrandTour({ndim: 10, stepsize: 0.00015});
 
   let xRange, yRange;
   if(container.width > container.height){

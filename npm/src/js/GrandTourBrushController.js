@@ -146,7 +146,7 @@ export default class GrandTourBrushController extends GrandTourBaseController{
     this.gt.matrix[this.argmax][0] += dx*this.dmax/this.ref[this.argmax];
     this.gt.matrix[this.argmax][1] += dy*this.dmax/this.ref[this.argmax];
     this.gt.matrix = utils.orthogonalize(this.gt.matrix, this.argmax);
-    this.view.alpha = this.brushSelected.map((i)=>i==true?1.0:0.1);
+    // this.view.alpha = this.brushSelected.map((i)=>i==true?1.0:0.1);
 
     if(!this.isGrandTourPlaying){
       this.view.render();
@@ -156,12 +156,12 @@ export default class GrandTourBrushController extends GrandTourBaseController{
   }
 
   onBoxDragEnd(event){
-    this.stopUpdateBox();
-    this.overlay.hideBox();
-    this.view.alpha = Array.from(Array(this.npoint), ()=>1.0);
-    if(!this.isGrandTourPlaying){
-      this.view.render();
-    }
+    // this.stopUpdateBox();
+    // this.overlay.hideBox();
+    // this.view.alpha = Array.from(Array(this.npoint), ()=>1.0);
+    // if(!this.isGrandTourPlaying){
+    //   this.view.render();
+    // }
   }
 
   play(){

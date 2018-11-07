@@ -1,4 +1,5 @@
 py/__pycache__
 py/demo/
 old/*data/
+npm/data/
 node_modules/
