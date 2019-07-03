@@ -1,5 +1,6 @@
 py/__pycache__
 py/demo/
 old/*data/
+old/
 npm/data/
 node_modules/

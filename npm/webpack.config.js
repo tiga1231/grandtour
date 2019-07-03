@@ -1,49 +1,41 @@
 const path = require('path');
-const HtmlWebPackPlugin = require("html-webpack-plugin");
-const MiniCssExtractPlugin = require("mini-css-extract-plugin");
-const webpack = require('webpack');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+const { CleanWebpackPlugin } = require('clean-webpack-plugin');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = {
-	entry: './src/js/main.js',
-	output: {
-		path: path.resolve(__dirname, 'dist'),
-		filename: 'main.js'
-	},
-	module: {
-		rules: [
-		{
-			test: /\.js$/,
-			exclude: /node_modules/,
-			use: {
-				loader: "babel-loader"
-			}
-		},
-		{
-			test: /\.html$/,
-			use: [{
-				loader: "html-loader",
-				options: { minimize: true }
-			}]
-		},
-		{
-			test: /\.css$/,
-			use: [MiniCssExtractPlugin.loader, "css-loader"]
-		},
-		{
-            test: /\.glsl$/,
-            use: {loader: 'webpack-glsl-loader'}
-        }
-		]
-	},
-  plugins: [
-	new HtmlWebPackPlugin({
-		template: "./src/index.html",
-		filename: "./index.html"
-	}),
-    new MiniCssExtractPlugin({
-		filename: "[name].css",
-		chunkFilename: "[id].css"
-    })
-  ]
+    mode: 'development',
+    devtool: 'inline-source-map',
+    devServer: {
+        stats: "minimal",
+        contentBase: './public',
+    },
+    entry: {
+        main: './src/main.js',
+    },
+    node: {
+        fs: 'empty'
+    },
+    plugins: [
+        new CleanWebpackPlugin(),
+        new HtmlWebpackPlugin({
+            title: 'the Grand Tour',
+            template: "./src/index.html", 
+            filename: "index.html", 
+        }),
+        new CopyWebpackPlugin([ { from: 'static/' } ])
+    ],
+    output: {
+        filename: '[name].bundle.js',
+        path: path.resolve(__dirname, 'public')
+    },
+    module: {
+        rules: [
+            {
+                test: /\.bin$/,
+                use: {loader: 'arraybuffer-loader'}
+            }
 
+        ]
+    }
 };
