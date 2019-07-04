@@ -9,7 +9,7 @@ function parseData(buffer, url){
     let labelRegex = url.match(/(labels).bin$/);
     if (dataRegex !== null){
         let name = dataRegex[1];
-        let array = new Float32Array(buffer);
+        let array = Array.from(new Float32Array(buffer));
         return {
             name, 
             data:reshape(array, [100,1000,10])
@@ -37,16 +37,13 @@ function saveDataToView(urls, view){
 
 window.onload = ()=>{
     let view = new GrandTourView();
-    let urls = ['/data/d10.bin', '/data/labels.bin'];
+    let urls = ['/data/d10.bin', '/data/d11.bin', '/data/labels.bin'];
     saveDataToView(urls, view);
-    // while(view.isDataReady() !== true){
     let hanlderId = setInterval(()=>{
         if(view.isDataReady()){
-            view.plot(99);
             view.show();
-            clearInterval(hanlderId)
+            clearInterval(hanlderId);
         }
-    }, 2000);
-    // }
+    }, 200);
     window.view = view;
 }

@@ -15,10 +15,13 @@
   "dependencies": {
     "d3": "^5.9.7",
     "fs": "0.0.1-security",
+    "mathjs": "^6.0.2",
     "net": "^1.0.2",
     "numeric": "^1.2.6",
+    "postprocessing": "^6.5.1",
     "request": "^2.88.0",
     "three-orbit-controls": "^82.1.0",
+    "three.ssaopass": "^1.0.1",
     "tls": "0.0.1"
   },
   "devDependencies": {

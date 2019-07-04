@@ -1,5 +1,21 @@
 import * as d3 from 'd3';
 
+export let baseColorsHex = d3.schemeCategory10;
+baseColorsHex.push('#444444');
+baseColorsHex.push('#444444');
+
+function hexToRgb(hex) {
+  let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return [
+    parseInt(result[1], 16),
+    parseInt(result[2], 16),
+    parseInt(result[3], 16)
+  ];
+}
+export let baseColors = baseColorsHex.map((d)=>(hexToRgb(d)));
+export let baseColorsInt = baseColorsHex.map((d)=>parseInt(d.slice(1), 16));
+
+
 export function loadDataBin(url, callback=()=>{}) {
   let xhr = new window.XMLHttpRequest();
   let ready = false;
@@ -48,18 +64,29 @@ export function reshape(array, shape){
 }
 
 
-
-export let baseColorsHex = d3.schemeCategory10;
-baseColorsHex.push('#444444');
-baseColorsHex.push('#444444');
-
-function hexToRgb(hex) {
-  let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return [
-    parseInt(result[1], 16),
-    parseInt(result[2], 16),
-    parseInt(result[3], 16)
-  ];
+export function mix(a,b,p){
+  return numeric.add(numeric.mul(a, (1-p)), numeric.mul(b, (p)));
 }
-export let baseColors = baseColorsHex.map((d)=>(hexToRgb(d)));
-export let baseColorsInt = baseColorsHex.map((d)=>parseInt(d.slice(1), 16));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
