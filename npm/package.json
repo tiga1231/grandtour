@@ -20,6 +20,7 @@
     "numeric": "^1.2.6",
     "postprocessing": "^6.5.1",
     "request": "^2.88.0",
+    "three-full": "^17.1.0",
     "three-orbit-controls": "^82.1.0",
     "three.ssaopass": "^1.0.1",
     "tls": "0.0.1"

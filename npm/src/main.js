@@ -12,7 +12,7 @@ function parseData(buffer, url){
         let array = Array.from(new Float32Array(buffer));
         return {
             name, 
-            data:reshape(array, [100,1000,10])
+            data: reshape(array, [100,1000,10])
         };
     }else if(labelRegex !== null){
         let name = labelRegex[1];
@@ -36,7 +36,10 @@ function saveDataToView(urls, view){
 }
 
 window.onload = ()=>{
-    let view = new GrandTourView();
+    let view = new GrandTourView({
+        ndim: 10,
+        nepoch: 100
+    });
     let urls = ['/data/d10.bin', '/data/d11.bin', '/data/labels.bin'];
     saveDataToView(urls, view);
     let hanlderId = setInterval(()=>{
