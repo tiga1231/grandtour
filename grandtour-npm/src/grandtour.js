@@ -71,16 +71,21 @@ export class GrandTour {
 
 
     project(data, dt, view) {
-        this.step(dt);
-        let matrix = this.matrix;
-        matrix = math.transpose(matrix);
-        matrix = matrix.slice(0, 3);
-        matrix = math.transpose(matrix);
-        if(view!==undefined){
-            matrix = math.multiply(view, matrix);
+        if (dt==0 && this.lastRes !== undefined){
+            return this.lastRes;
+        }else{
+            this.step(dt);
+            let matrix = this.matrix;
+            matrix = math.transpose(matrix);
+            matrix = matrix.slice(0, 3);
+            matrix = math.transpose(matrix);
+            if(view!==undefined){
+                matrix = math.multiply(view, matrix);
+            }
+            let res = math.multiply(data, matrix.slice(0,data[0].length));
+            this.lastRes = res;
+            return res;
         }
-        let res = math.multiply(data, matrix.slice(0,data[0].length));
-        return res;
-    };
+    }
 
 }

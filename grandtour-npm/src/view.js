@@ -30,34 +30,36 @@ export class GrandTourView {
         document.addEventListener('keypress', this.onKeyPress.bind(this));
         document.addEventListener('keydown', this.onKeyDown.bind(this));
         document.addEventListener('keyup', this.onKeyUp.bind(this));
-        document.addEventListener('mousemove', this.onMouseMove.bind(this));
         this.initScene();
-        this.initOverlay();
+        this.initControl();
     }
 
     onKeyDown(event){
-        if (event.key === 'Control'){
-            this.orbit.enabled = false;
-            this.selectionHelper.enabled = true;
-        }
-    }
-
-    onKeyUp(event){
         if (event.key === 'Control'){
             this.orbit.enabled = true;
             this.selectionHelper.enabled = false;
         }
     }
 
-    initOverlay(){
+    onKeyUp(event){
+        if (event.key === 'Control'){
+            this.orbit.enabled = false;
+            this.selectionHelper.enabled = true;
+            
+        }
+    }
+
+
+    initBrush(){
         this.selectionBox = new SelectionBox(this.camera, this.scene);
         this.selectionHelper = new SelectionHelper(this.selectionBox, this.renderer, 'selectBox');
         this.selectionHelper.enabled = false;
 
         document.addEventListener('mousedown', ()=>{
             if(this.selectionHelper.enabled){
-                for ( let item of this.selectionBox.collection ) {
+                for ( let item of this.objectGroup.children ) {
                     item.material.emissive = new THREE.Color( 0x000000 );
+                    item.selected = false;
                 }
                 this.selectionBox.startPoint.set(
                     ( event.clientX / window.innerWidth ) * 2 - 1,
@@ -69,8 +71,10 @@ export class GrandTourView {
 
         document.addEventListener( 'mousemove', (event)=>{
             if (this.selectionHelper.enabled && this.selectionHelper.isDown) {
-                for ( let i = 0; i < this.selectionBox.collection.length; i ++ ) {
+                for ( let i = 0; i < this.selectionBox.collection.length; i++ ) {
+                    this.selectionBox.collection[i].selected = false;
                     this.selectionBox.collection[i].material.emissive = new THREE.Color( 0x000000 );
+
                 }
                 this.selectionBox.endPoint.set(
                     ( event.clientX / window.innerWidth ) * 2 - 1,
@@ -78,30 +82,56 @@ export class GrandTourView {
                     0.5 );
                 let selected = this.selectionBox.select();
                 for (let i=0; i<selected.length; i++) {
-                    selected[i].material.emissive = new THREE.Color( 0xffffff );
+                    selected[i].selected = true;
+                    selected[i].material.emissive = new THREE.Color( 0x777777 );
+                }
+
+                if (this.handle === undefined){
+                    let geometry = new THREE.SphereGeometry(0.1, 32,32);
+                    let material = new THREE.MeshPhysicalMaterial({
+                        color: 0xffffff,
+                        flatShading: true,
+                        roughness: 0.73,
+                        metalness: 0.48,
+                        clearCoat: 0.37,
+                        clearCoatRoughness: 0.3,
+                    });
+                    this.handle = new THREE.Mesh(geometry, material);
+                    this.scene.add(this.handle);
+
+                    
+                    
+                }
+                let positions = selected.map(s=>[s.position.x, s.position.y, s.position.z]);
+                if (positions.length > 0){
+                    let centroid = math.mean(positions, 0);
+                    this.handle.position.set(...centroid.map(d=>this.scale_data2world(d)));
                 }
             }
         });
-        // this.overlay = d3.select('body').insert('svg', 'canvas');
+    }
 
-        // let width = window.innerWidth;
-        // let height = window.innerHeight;
 
-        // this.overlay
-        // .attr('width', width)
-        // .attr('height', height)
-        // .style('position', 'absolute');
+    initDrag(){
+        this.raycaster = new THREE.Raycaster();
+        this.raycaster.params.Points.threshold = 0.1;
+        this.mouse = new THREE.Vector2();
 
-        // this.brush = d3.brush()
-        // .on('brush', ()=>{});
+        document.addEventListener('mousemove', (event)=>{
+            // event.preventDefault();
+            this.mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+            this.mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+        });
 
-        // this.gBrush = this.overlay.append('g')
-        // .attr('class', 'brush')
-        // .call(this.brush);
 
-        // let orbit = new OrbitControls( this.camera, this.overlay.node() );
+
+    }
+
+
+    initControl(){
         this.orbit = new OrbitControls( this.camera, this.renderer.domElement );
-
+        this.initBrush();
+        this.initDrag();
     }
 
     onKeyPress(event){
@@ -112,11 +142,7 @@ export class GrandTourView {
         }
     }
 
-    onMouseMove(event){
-        // event.preventDefault();
-        this.mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-        this.mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
-    }
+    
 
     initScene(){
         let scene = new THREE.Scene();
@@ -167,8 +193,7 @@ export class GrandTourView {
                 clearCoatRoughness: 0.3,
             });
         });
-        this.raycaster = new THREE.Raycaster();
-        this.mouse = new THREE.Vector2();
+        
         //=============================
     }
 
@@ -217,7 +242,7 @@ export class GrandTourView {
     show(t=0){
         let dt = t-(this.t||0);
         this.t = t;
-
+        dt = 0;
         let data = mix(
             this.data.d11[Math.floor(this.epochIndex)], 
             this.data.d11[(Math.floor(this.epochIndex)+1) % this.nepoch],
@@ -225,16 +250,15 @@ export class GrandTourView {
         );
         
         let vmax = d3.max(data, row=>d3.max(row, d=>Math.abs(d)));
+        this.scale_data2world.domain([-vmax, vmax]);
 
         let positions = this.gt.project(data, 0);
-        this.scale_data2world.domain([-vmax, vmax]);
         this.plot(positions);
 
         // this.objectGroup.rotation.y += 0.005;
         // this.composer.render();
         this.renderer.render(this.scene, this.camera);
         requestAnimationFrame(this.show.bind(this));
-
     }
 
 }
