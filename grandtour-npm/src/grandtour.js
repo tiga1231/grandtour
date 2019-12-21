@@ -6,11 +6,26 @@ window.math = math;
 
 export class GrandTour {
     constructor(ndim){
-        this.ndim = ndim;
-        this.thetas = GrandTour.initThetas(ndim);
-        this.STEPSIZE = 0.00001;
+        this._ndim = ndim || 2;
+
+        this.STEPSIZE = 0.0002 / this._ndim;
         this._matrix = math.identity(this.ndim)._data;
+
+        this.thetas = GrandTour.initThetas(ndim);
+
     }
+
+
+    set ndim(n){
+        this._ndim = n;
+        this.STEPSIZE = 0.0002 / this._ndim;
+    }
+
+
+    get ndim(){
+        return this._ndim;
+    }
+
 
     static initThetas(ndim){
         let n = ndim*ndim;
@@ -18,13 +33,15 @@ export class GrandTour {
     }
 
 
-    get matrix() {
+    get matrix(){
         return this._matrix;
     }
 
-    set matrix(m) {
+
+    set matrix(m){
         this._matrix = numeric.clone(m);
     }
+
 
     step(dt){
         if (dt !== undefined) {
@@ -42,7 +59,8 @@ export class GrandTour {
         }
     }
 
-    getRotationMatrix(dim0, dim1, theta) {
+
+    getRotationMatrix(dim0, dim1, theta){
         let res = math.identity(this.ndim)._data;
         res[dim0][dim0] = Math.cos(theta);
         res[dim0][dim1] = Math.sin(theta);
@@ -52,8 +70,7 @@ export class GrandTour {
     }
 
 
-    multiplyRotationMatrix(matrix, i, j, theta) {
-
+    multiplyRotationMatrix(matrix, i, j, theta){
         if(theta == 0){
             return matrix;
         }
@@ -70,22 +87,18 @@ export class GrandTour {
     }
 
 
-    project(data, dt, view) {
-        if (dt==0 && this.lastRes !== undefined){
-            return this.lastRes;
-        }else{
-            this.step(dt);
-            let matrix = this.matrix;
-            matrix = math.transpose(matrix);
-            matrix = matrix.slice(0, 3);
-            matrix = math.transpose(matrix);
-            if(view!==undefined){
-                matrix = math.multiply(view, matrix);
-            }
-            let res = math.multiply(data, matrix.slice(0,data[0].length));
-            this.lastRes = res;
-            return res;
+    project(data, dt, view){
+        this.step(dt);
+        let matrix = this.matrix;
+        matrix = math.transpose(matrix);
+        matrix = matrix.slice(0, 3);
+        matrix = math.transpose(matrix);
+        if(view!==undefined){
+            matrix = math.multiply(view, matrix);
         }
+        let res = math.multiply(data, matrix.slice(0,data[0].length));
+        this.lastRes = res;
+        return res;
     }
 
 }

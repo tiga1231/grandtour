@@ -14,23 +14,14 @@
   "license": "ISC",
   "dependencies": {
     "d3": "^5.9.7",
-    "fs": "0.0.1-security",
     "mathjs": "^6.0.2",
-    "net": "^1.0.2",
-    "numeric": "^1.2.6",
-    "postprocessing": "^6.5.1",
-    "request": "^2.88.0",
-    "three-full": "^17.1.0",
-    "three-orbit-controls": "^82.1.0",
-    "three.ssaopass": "^1.0.1",
-    "tls": "0.0.1"
+    "numeric": "^1.2.6"
   },
   "devDependencies": {
     "arraybuffer-loader": "^1.0.7",
     "clean-webpack-plugin": "^3.0.0",
     "copy-webpack-plugin": "^5.0.3",
     "html-webpack-plugin": "^3.2.0",
-    "three": "^0.106.2",
     "webpack": "^4.35.2",
     "webpack-cli": "^3.3.5",
     "webpack-dev-server": "^3.7.2"

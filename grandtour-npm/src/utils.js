@@ -1,10 +1,14 @@
 import * as d3 from 'd3';
 
+//==== constants ====
+export let CLEAR_COLOR = [.1, .1, .1];
+
+
 export let baseColorsHex = d3.schemeCategory10;
 baseColorsHex.push('#444444');
 baseColorsHex.push('#444444');
 
-function hexToRgb(hex) {
+export function hexToRgb(hex) {
   let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return [
     parseInt(result[1], 16),
@@ -14,6 +18,51 @@ function hexToRgb(hex) {
 }
 export let baseColors = baseColorsHex.map((d)=>(hexToRgb(d)));
 export let baseColorsInt = baseColorsHex.map((d)=>parseInt(d.slice(1), 16));
+
+
+
+
+//==== functions ====
+//
+export function flatten(v){
+    return Float32Array.from(v.flat());
+}
+
+export function orthogonalize(matrix, priorityRowIndex=0) {
+  // make row vectors in matrix pairwise orthogonal;
+  
+  function proj(u, v) {
+    return numeric.mul(numeric.dot(u, v)/numeric.dot(u, u), u);
+  }
+
+  function normalize(v, unitlength=1) {
+    if (numeric.norm2(v) <= 0) {
+      return v;
+    } else {
+      return numeric.div(v, numeric.norm2(v)/unitlength);
+    }
+  }
+
+  // Gram–Schmidt orthogonalization
+  let priorityRow = matrix[priorityRowIndex];
+  let firstRow = matrix[0];
+  matrix[0] = priorityRow;
+  matrix[priorityRowIndex] = firstRow;
+
+  matrix[0] = normalize(matrix[0]);
+  for (let i=1; i<matrix.length; i++) {
+    for (let j=0; j<i; j++) {
+        matrix[i] = numeric.sub(matrix[i], proj(matrix[j], matrix[i]));
+    }
+    matrix[i] = normalize(matrix[i]);
+  }
+  let tempRow = matrix[0];
+  matrix[0] = matrix[priorityRowIndex];
+  matrix[priorityRowIndex] = tempRow;
+  return matrix;
+}
+
+
 
 
 export function loadDataBin(url, callback=()=>{}) {
