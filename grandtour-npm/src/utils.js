@@ -28,6 +28,14 @@ export function flatten(v){
     return Float32Array.from(v.flat());
 }
 
+export function normalize(v, unitlength=1) {
+  if (numeric.norm2(v) <= 0) {
+    return v;
+  } else {
+    return numeric.div(v, numeric.norm2(v)/unitlength);
+  }
+}
+
 export function orthogonalize(matrix, priorityRowIndex=0) {
   // make row vectors in matrix pairwise orthogonal;
   
@@ -35,13 +43,7 @@ export function orthogonalize(matrix, priorityRowIndex=0) {
     return numeric.mul(numeric.dot(u, v)/numeric.dot(u, u), u);
   }
 
-  function normalize(v, unitlength=1) {
-    if (numeric.norm2(v) <= 0) {
-      return v;
-    } else {
-      return numeric.div(v, numeric.norm2(v)/unitlength);
-    }
-  }
+  
 
   // Gram–Schmidt orthogonalization
   let priorityRow = matrix[priorityRowIndex];

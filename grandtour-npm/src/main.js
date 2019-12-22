@@ -22,19 +22,28 @@ window.onload = ()=>{
     d3.json(url).then((dataObj)=>{
         let sc = d3.scaleOrdinal(d3.schemeCategory10);
         let position = dataObj.map(d=>[d.sepalLength, d.sepalWidth, d.petalLength, d.petalWidth]);
+
+        //centralize data (optional)
+        let center = math.mean(position, 0);
+        position = position.map(
+            row=>numeric.sub(row, center)
+        );
+
         let color = dataObj.map(d=>{
             let hex = sc(d.species);
             let c = utils.hexToRgb(hex);
             c[3] = 255; //alpha
             return c;
         });
+
         let view = new GrandTourView({
             canvas: canvas,
             position: position,
             color: color,
             handle: true,
             brush: true,
-            pointSize: 6.0,
+            pointSize: 10.0,
+            scaleMode: 'center',
         });
         view.play();
         window.view = view;
@@ -71,6 +80,7 @@ window.onload = ()=>{
     //     color: '#1f78b4',
     //     shouldDrawLines: true,
     //     handle: true,
+    //     brush: true,
     // });
     // view.play();
     // window.view = view;
@@ -81,9 +91,12 @@ window.onload = ()=>{
     //resize handler
     window.onresize = ()=>{
         view.isWindowResized = true;
-        canvas
+        view.canvas
         .attr('width', window.innerWidth * devicePixelRatio)
         .attr('height', window.innerHeight * devicePixelRatio);
+        view.svg
+        .attr('width', window.innerWidth)
+        .attr('height', window.innerHeight);
         view.plot();
     };
 

@@ -18,12 +18,17 @@ export class GrandTourView {
         for (let k in kwargs){
             this[k] = kwargs[k];
         }
-        this.t = this.t || 0;
-        this.gt = new GrandTour(this.position[0].length);
 
+        //default values
+        this.t = this.t || 0;
+        this.scaleMode = this.scaleMode || 'center';
+
+        //init values
+        this.gt = new GrandTour(this.position[0].length);
         this.sx = d3.scaleLinear();
         this.sy = d3.scaleLinear();
         this.selected = [];
+
         this.init();
     }
 
@@ -82,6 +87,9 @@ export class GrandTourView {
         
         let drag = d3.drag()
         .on('drag', function(d, i){
+            if(d3.event.dx==0 && d3.event.dy==0){
+                return;
+            }
 
             let sx = that.sx;
             let sy = that.sy;
@@ -90,6 +98,8 @@ export class GrandTourView {
 
             let dx = sx.invert(d3.event.dx) - sx.invert(0);
             let dy = sy.invert(d3.event.dy) - sy.invert(0);
+            
+
             matrix[i][0] += dx/vmax;
             matrix[i][1] += dy/vmax;
             matrix = utils.orthogonalize(matrix, i);
@@ -146,7 +156,7 @@ export class GrandTourView {
                     let c = that.color[i];
                     let selected = (x0 < x && x < x1 && y0 < y && y < y1);
                     that.selected[i] = selected;
-                    c[3] = selected ? 255: 50; //update color
+                    c[3] = selected ? 255 : 50; //update color
 
                     //update centroid
                     if(selected){
@@ -163,13 +173,14 @@ export class GrandTourView {
                 }else{
                     centroid = null;
                 }
+                that.count = count;
                 that.centroid = centroid;
             }
         })
         .on('end', function(){
             that.gBrush.style('opacity', 0.0)
             // .style('pointer-events', 'none');
-            if(d3.event.selection === null){ //brushed cleared
+            if(d3.event.selection === null || that.count == 0){ //brushed cleared
                 for(let i=0; i<that.points.length; i++){
                     let c = that.color[i];
                     c[3] = 255;
@@ -186,19 +197,49 @@ export class GrandTourView {
     initCentroid(){
         let that = this;
         let drag = d3.drag().on('drag', function(){
+
+            if(d3.event.dx==0 && d3.event.dy==0){
+                return;
+            }
+
             let dx = that.sx.invert(d3.event.dx) - that.sx.invert(0);
             let dy = that.sy.invert(d3.event.dy) - that.sy.invert(0);
             let z = numeric.norm2(that.centroid); //normalizing constant
-            
-            dx = numeric.mul(that.centroid, dx/z);
-            dy = numeric.mul(that.centroid, dy/z);
 
-            for(let i=0; i<that.gt.matrix.length; i++){
-                let row = that.gt.matrix[i];
-                row[0] += dx[i]/z;
-                row[1] += dy[i]/z;
-            }
-            that.gt.matrix = utils.orthogonalize(that.gt.matrix, 0);
+            // MSE formulation
+            // dx = numeric.mul(that.centroid, dx/z);
+            // dy = numeric.mul(that.centroid, dy/z);
+            // for(let i=0; i<that.gt.matrix.length; i++){
+            //     let row = that.gt.matrix[i];
+            //     row[0] += dx[i];
+            //     row[1] += dy[i];
+            // }
+            // that.gt.matrix = utils.orthogonalize(that.gt.matrix, 0);
+            
+            // Rotation formulation
+            let p0 = utils.normalize(that.centroid);
+            let p1 = that.centroid.slice();
+            p1[0] += dx;
+            p1[1] += dy;
+            p1 = utils.normalize(p1);
+            let theta = math.acos(numeric.dot(p0, p1));
+            let Q = that.gt.matrix.map((row,i)=>{
+                if(i==0){
+                    return p0;
+                }else if(i==1){
+                    return p1;
+                }else{
+                    return row;
+                }
+            });
+            Q = utils.orthogonalize(Q);
+            //$$\Rho = Q^T R_{0,1})theta) Q$$
+            let rho = numeric.transpose(Q);
+            rho = numeric.dot(rho, that.gt.getRotationMatrix(0,1,theta));
+            rho = numeric.dot(rho, Q);
+            that.gt.matrix = numeric.dot(that.gt.matrix, rho);
+
+
         });
 
         this.centroidCircle = this.svg.selectAll('.centroid')
@@ -312,24 +353,34 @@ export class GrandTourView {
 
     updateScale(points){
         let gl = this.webgl.gl;
-
-        if (this.isWindowResized===undefined || this.isWindowResized){
+        if (this.scaleMode === 'span'){
             this.xmin = d3.min(points, d=>d[0]);
             this.xmax = d3.max(points, d=>d[0]);
             this.ymin = d3.min(points, d=>d[1]);
             this.ymax = d3.max(points, d=>d[1]);
-            this.isWindowResized = false;
-        }else{
-            this.xmin = Math.min(this.xmin, d3.min(points, d=>d[0]));
+        }else if(this.scaleMode === 'center'){
+            if (this.isWindowResized===undefined || this.isWindowResized){
+                this.xmin = d3.min(points, d=>d[0]);
+                this.xmax = d3.max(points, d=>d[0]);
+                this.ymin = d3.min(points, d=>d[1]);
+                this.ymax = d3.max(points, d=>d[1]);
+                this.isWindowResized = false;
+            }else{
+                this.xmin = Math.min(this.xmin, d3.min(points, d=>d[0]));
             this.xmax = Math.max(this.xmax, d3.max(points, d=>d[0]));
             this.ymin = Math.min(this.ymin, d3.min(points, d=>d[1]));
             this.ymax = Math.max(this.ymax, d3.max(points, d=>d[1]));
+            }
+        }
+
+        if(this.scaleMode == 'center' && this.handleMax !== undefined){
+            this.xmax = Math.max(this.xmax, this.handleMax);
+            this.ymax = Math.max(this.ymax, this.handleMax);
         }
 
         let xrange = this.xmax-this.xmin;
         let yrange = this.ymax-this.ymin;
 
-        this.scaleMode = 'center';
         if(this.scaleMode == 'span'){
             if (gl.canvas.width/gl.canvas.height > xrange/yrange){
                 let xmiddle = (this.xmin + this.xmax)/2;
@@ -410,6 +461,7 @@ export class GrandTourView {
         }else{ //hex string
             let color = [...utils.hexToRgb(this.color), 255];
             colors = d3.range(points.length).map(d=>color);
+            this.color = colors;
         }
 
         gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);

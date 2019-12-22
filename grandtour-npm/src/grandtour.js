@@ -44,7 +44,7 @@ export class GrandTour {
 
 
     step(dt){
-        if (dt !== undefined) {
+        if (dt !== undefined && this.STEPSIZE > 1e-9) {
             let angles = this.thetas.map((th) => th * dt * this.STEPSIZE);
             let k = -1;
             for (let i=0; i<this.ndim; i++) {
