@@ -8,7 +8,7 @@ export class GrandTour {
     constructor(ndim){
         this._ndim = ndim || 2;
 
-        this.STEPSIZE = 0.0002 / this._ndim;
+        this.STEPSIZE = 0.0001 / this._ndim;
         this._matrix = math.identity(this.ndim)._data;
 
         this.thetas = GrandTour.initThetas(ndim);
@@ -18,7 +18,7 @@ export class GrandTour {
 
     set ndim(n){
         this._ndim = n;
-        this.STEPSIZE = 0.0002 / this._ndim;
+        this.STEPSIZE = 0.0001 / this._ndim;
     }
 
 
