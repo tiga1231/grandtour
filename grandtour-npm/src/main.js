@@ -81,6 +81,7 @@ window.onload = ()=>{
     //     shouldDrawLines: true,
     //     handle: true,
     //     brush: true,
+    //     pointSize: 10.0
     // });
     // view.play();
     // window.view = view;

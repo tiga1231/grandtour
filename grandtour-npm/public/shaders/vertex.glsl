@@ -18,6 +18,7 @@ void main() {
   gl_Position.x = (a_position.x - xDataMin) / (xDataMax - xDataMin) * 2.0 - 1.0;
   gl_Position.y = (a_position.y - yDataMin) / (yDataMax - yDataMin) * 2.0 - 1.0;
   gl_Position.z = (a_position.z - zDataMin) / (zDataMax - zDataMin);
+  gl_Position.z *= 0.99;
   // gl_Position.xyz *= 0.95; //margin
   gl_Position.w = 1.0;
   
