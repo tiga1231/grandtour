@@ -23,6 +23,7 @@ export class GrandTourView {
 
         this.sx = d3.scaleLinear();
         this.sy = d3.scaleLinear();
+        this.selected = [];
         this.init();
     }
 
@@ -30,16 +31,20 @@ export class GrandTourView {
     init(){
         this.initGL();
 
+        let width = this.canvas.node().width / devicePixelRatio;
+        let height = this.canvas.node().height / devicePixelRatio;
+
         this.svg = d3.select(this.canvas.node().parentNode)
         .append('svg')
-        .attr('width', '100%')
-        .attr('height', '100%')
+        .attr('width', width)
+        .attr('height', height)
         .style('position', 'absolute')
         .style('top', '0')
         .style('left', '0');
 
         if(this.brush === true){
             this.initBrush();
+            this.initCentroid();
         }
 
         if(this.handle === true){
@@ -60,11 +65,11 @@ export class GrandTourView {
         .attr('stroke', '#aaaaaa')
         .attr('stroke-linecap','round');
 
-        this.handle = this.svg.selectAll('.handle')
+        this.handle = this.svg.selectAll('.axis-handle')
         .data(new Array(this.position[0].length).fill(0))
         .enter()
         .append('circle')
-        .attr('class', 'handle')
+        .attr('class', 'axis-handle')
         .attr('r', 10)
         .attr('fill', '#aaaaaa')
         .attr('stroke', 'white')
@@ -73,12 +78,16 @@ export class GrandTourView {
         .style('cursor', 'grab');
 
         //drag event handler
-        let sx = this.sx;
-        let sy = this.sy;
-        let matrix = this.gt.matrix;
-        let vmax = this.handleMax;
+        let that = this;
+        
         let drag = d3.drag()
         .on('drag', function(d, i){
+
+            let sx = that.sx;
+            let sy = that.sy;
+            let matrix = that.gt.matrix;
+            let vmax = that.handleMax;
+
             let dx = sx.invert(d3.event.dx) - sx.invert(0);
             let dy = sy.invert(d3.event.dy) - sy.invert(0);
             matrix[i][0] += dx/vmax;
@@ -107,6 +116,120 @@ export class GrandTourView {
 
 
     initBrush(){
+        
+        let that = this;
+        this.brush = d3.brush()
+        .on('start', function(){
+            that.gBrush
+            .style('opacity', 1.0)
+            // .style('pointer-events', 'auto');
+        })
+        .on('brush', function(){
+            
+            let s = d3.event.selection;
+            if(s !== null){
+                let x0 = that.sx.invert(s[0][0]);
+                let x1 = that.sx.invert(s[1][0]);
+                let y0 = that.sy.invert(s[0][1]);
+                let y1 = that.sy.invert(s[1][1]);
+                if(y0 > y1){
+                    let tmp = y1;
+                    y1 = y0;
+                    y0 = tmp;
+                }
+
+                let count = 0;
+                let centroid = undefined;
+                for(let i=0; i<that.points.length; i++){
+                    let x = that.points[i][0];
+                    let y = that.points[i][1];
+                    let c = that.color[i];
+                    let selected = (x0 < x && x < x1 && y0 < y && y < y1);
+                    that.selected[i] = selected;
+                    c[3] = selected ? 255: 50; //update color
+
+                    //update centroid
+                    if(selected){
+                        count += 1;
+                        if(centroid === undefined){
+                            centroid = that.position[i].slice();
+                        }else{
+                            centroid = numeric.add(centroid, that.position[i]);
+                        }
+                    }
+                }
+                if (count > 0){
+                    centroid = numeric.div(centroid, count);
+                }else{
+                    centroid = null;
+                }
+                that.centroid = centroid;
+            }
+        })
+        .on('end', function(){
+            that.gBrush.style('opacity', 0.0)
+            // .style('pointer-events', 'none');
+            if(d3.event.selection === null){ //brushed cleared
+                for(let i=0; i<that.points.length; i++){
+                    let c = that.color[i];
+                    c[3] = 255;
+                }
+            }
+
+        });
+
+        this.gBrush = this.svg.append('g')
+        .attr('class', 'brush')
+        .call(this.brush);
+    }
+
+    initCentroid(){
+        let that = this;
+        let drag = d3.drag().on('drag', function(){
+            let dx = that.sx.invert(d3.event.dx) - that.sx.invert(0);
+            let dy = that.sy.invert(d3.event.dy) - that.sy.invert(0);
+            let z = numeric.norm2(that.centroid); //normalizing constant
+            
+            dx = numeric.mul(that.centroid, dx/z);
+            dy = numeric.mul(that.centroid, dy/z);
+
+            for(let i=0; i<that.gt.matrix.length; i++){
+                let row = that.gt.matrix[i];
+                row[0] += dx[i]/z;
+                row[1] += dy[i]/z;
+            }
+            that.gt.matrix = utils.orthogonalize(that.gt.matrix, 0);
+        });
+
+        this.centroidCircle = this.svg.selectAll('.centroid')
+        .data([0])
+        .enter()
+        .append('circle')
+        .attr('class', 'centroid')
+        .attr('r', 20)
+        .attr('fill', '#aaaaaa')
+        .attr('stroke', 'yellow')
+        .attr('stroke-width', 0.5)
+        .style('opacity', 0.5)
+        .call(drag);
+    }
+
+
+    updateCentroid(){
+        let position = this.position;
+        let selected = this.selected;
+
+        if(this.centroid !== null && this.centroid !== undefined){
+            let dt = 0;
+            let point = this.gt.project(this.centroid, dt);
+            this.centroidCircle
+            .attr('cx', this.sx(point[0]))
+            .attr('cy', this.sy(point[1]));
+        }else{
+            this.centroidCircle
+            .attr('cx', -100)
+            .attr('cy', -100);
+        }
 
     }
 
@@ -268,8 +391,11 @@ export class GrandTourView {
 
         this.updateScale(points);
         this.normalizeDepth(points);
-        if(this.handle){
+        if(this.handle !== undefined && this.handle !== false){
             this.updateHandle(this.position);
+        }
+        if(this.brush !== undefined && this.brush !== false){
+            this.updateCentroid(this.position);
         }
         
         

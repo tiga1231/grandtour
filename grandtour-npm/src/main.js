@@ -33,6 +33,7 @@ window.onload = ()=>{
             position: position,
             color: color,
             handle: true,
+            brush: true,
             pointSize: 6.0,
         });
         view.play();
