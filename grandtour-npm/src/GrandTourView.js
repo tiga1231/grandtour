@@ -22,7 +22,7 @@ export class GrandTourView {
         //default values
         this.t = this.t || 0;
         this.scaleMode = this.scaleMode || 'center';
-
+        this.handleScale = this.handleScale || 1.1;
         //init values
         this.gt = new GrandTour(this.position[0].length);
         this.sx = d3.scaleLinear();
@@ -59,7 +59,7 @@ export class GrandTourView {
 
 
     initHandle(){
-        this.handleMax = math.max(math.abs(this.position)) * 0.95;
+        this.handleMax = math.max(math.abs(this.position)) * this.handleScale;
 
         this.handleLines = this.svg.selectAll('.axis-line')
         .data(new Array(this.position[0].length).fill(0))
