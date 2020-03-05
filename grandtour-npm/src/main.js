@@ -7,7 +7,7 @@ window.d3 = d3;
 
 window.onload = ()=>{
 
-    //create canvas
+    //1. create canvas
     let canvas = d3.select('#root').append('canvas')
     .attr('id', 'main')
     .attr('width', window.innerWidth * devicePixelRatio)
@@ -17,43 +17,50 @@ window.onload = ()=>{
     .style('height', '100%');
 
     // example 1: json data
-    // 
-    // let url = 'data/iris.json';
-    // d3.json(url).then((dataObj)=>{
-    //     let sc = d3.scaleOrdinal(d3.schemeCategory10);
-    //     let position = dataObj.map(d=>[d.sepalLength, d.sepalWidth, d.petalLength, d.petalWidth]);
+    let url = 'data/iris.json';
+    d3.json(url).then((dataObj)=>{
+        let sc = d3.scaleOrdinal(d3.schemeCategory10);
 
-    //     //centralize data (optional)
-    //     let center = math.mean(position, 0);
-    //     position = position.map(
-    //         row=>numeric.sub(row, center)
-    //     );
+        //2. Define positions
+        let position = dataObj.map(d=>[d.sepalLength, d.sepalWidth, d.petalLength, d.petalWidth]);
 
-    //     let color = dataObj.map(d=>{
-    //         let hex = sc(d.species);
-    //         let c = utils.hexToRgb(hex);
-    //         // let c = [255,255,255];
-    //         c[3] = 255; //alpha
-    //         return c;
-    //     });
+        //centralize data (optional)
+        let center = math.mean(position, 0);
+        position = position.map(
+            row=>numeric.sub(row, center)
+        );
 
-    //     let view = new GrandTourView({
-    //         canvas: canvas,
-    //         position: position,
-    //         color: color,
-    //         handle: true,
-    //         brush: true,
-    //         pointSize: 10.0,
-    //         scaleMode: 'center',
-    //     });
-    //     view.play();
-    //     window.view = view;
-    // });
+        //3. Define colors
+        let color = dataObj.map(d=>{
+            let hex = sc(d.species);
+            let c = utils.hexToRgb(hex);
+            // let c = [255,255,255];
+            c[3] = 255; //alpha
+            return c;
+        });
+
+        //4. Create view
+        let view = new GrandTourView({
+            canvas: canvas,
+            position: position,
+            color: color,
+            handle: true,
+            brush: true,
+            pointSize: 10.0,
+            scaleMode: 'center',
+        });
+
+        //5. play
+        view.play();
+
+        // global variables for debugging
+        window.view = view;
+    });
     
 
 
     //example 2: tesseract
-    //
+    
     // let basePoints = [
     //   [1, 1, 1, 1], [-1, 1, 1, 1],
     //   [-1, -1, 1, 1], [1, -1, 1, 1],
@@ -88,55 +95,55 @@ window.onload = ()=>{
     // window.view = view;
 
 
-    // example 3: softmax data
-    // 
-    let url = 'data/presoftmax.json';
-    d3.json(url).then((dataObj)=>{
+    // example 3: pre-softmax data
+    // where dataObj = {embeddings: [[[epoch, example, dimension]]], labels: [8,2,0,...]};
+    //
+    // let url = 'data/presoftmax.json';
+    // d3.json(url).then((dataObj)=>{
+    //     let nmax = 1000;
+    //     let sc = d3.scaleOrdinal(d3.schemeCategory10);
+    //     let position = dataObj.embeddings[0].slice(0,nmax);
 
-        let nmax = 1000;
-        let sc = d3.scaleOrdinal(d3.schemeCategory10);
-        let position = dataObj.embeddings[0].slice(0,nmax);
+    //     //centralize data (optional)
+    //     let center = math.mean(position, 0);
+    //     position = position.map(
+    //         row=>numeric.sub(row, center)
+    //     );
 
-        //centralize data (optional)
-        let center = math.mean(position, 0);
-        position = position.map(
-            row=>numeric.sub(row, center)
-        );
+    //     let color = dataObj.labels.slice(0,nmax).map(l=>{
+    //         let hex = sc(l);
+    //         let c = utils.hexToRgb(hex);
+    //         c[3] = 255; //alpha
+    //         return c;
+    //     });
 
-        let color = dataObj.labels.slice(0,nmax).map(l=>{
-            let hex = sc(l);
-            let c = utils.hexToRgb(hex);
-            c[3] = 255; //alpha
-            return c;
-        });
+    //     let view = new GrandTourView({
+    //         canvas: canvas,
+    //         position: position,
+    //         color: color,
+    //         handle: true,
+    //         brush: true,
+    //         pointSize: 8.0,
+    //         scaleMode: 'center',
+    //     });
+    //     view.play();
 
-        let view = new GrandTourView({
-            canvas: canvas,
-            position: position,
-            color: color,
-            handle: true,
-            brush: true,
-            pointSize: 10.0,
-            scaleMode: 'center',
-        });
-        view.play();
+    //     window.view = view;
+    //     window.dataObj = dataObj;
 
-        window.view = view;
-        window.dataObj = dataObj;
+    //     let epoch = 0;
+    //     window.addEventListener("keydown", event => {
+    //         if(event.key == 'n'){
+    //             epoch += 1;
+    //         }else if (event.key == 'p'){
+    //             epoch -= 1;
+    //         }
+    //         epoch = (epoch+dataObj.embeddings.length) % dataObj.embeddings.length;
+    //         view.position = dataObj.embeddings[epoch].slice(0,nmax);
+    //         // view.handleMax = math.max(math.abs(view.position)) * view.handleScale;
 
-        let epoch = 0;
-        window.addEventListener("keydown", event => {
-            if(event.key == 'n'){
-                epoch += 1;
-            }else if (event.key == 'p'){
-                epoch -= 1;
-            }
-            epoch = (epoch+dataObj.embeddings.length) % dataObj.embeddings.length;
-            view.position = dataObj.embeddings[epoch].slice(0,nmax);
-            // view.handleMax = math.max(math.abs(view.position)) * view.handleScale;
-
-        });
-    });
+    //     });
+    // });
 
 
 
