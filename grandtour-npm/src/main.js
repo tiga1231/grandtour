@@ -96,7 +96,7 @@ window.onload = ()=>{
 
 
     // example 3: pre-softmax data
-    // where dataObj = {embeddings: [[[epoch, example, dimension]]], labels: [8,2,0,...]};
+    // where dataObj = {embeddings: [[[epoch x example x dimension]]], labels: [8,2,0,...]};
     //
     // let url = 'data/presoftmax.json';
     // d3.json(url).then((dataObj)=>{
