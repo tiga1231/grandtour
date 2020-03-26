@@ -2,5 +2,6 @@ py/__pycache__
 py/demo/
 old/*data/
 old/
+others/
 node_modules/
 grandtour-npm/package-lock.json
