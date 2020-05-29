@@ -6,8 +6,9 @@ import * as utils from './utils';
 import { GrandTour } from './GrandTour';
 import * as webgl_utils from './webgl-utils';
 
+const MAX_DIM = 16;
 
-export class GrandTourView {
+export class GrandTourInTheShaderView {
 
 
     constructor(kwargs){
@@ -24,7 +25,8 @@ export class GrandTourView {
         this.scaleMode = this.scaleMode || 'center';
         this.handleScale = this.handleScale || 1.1;
         //init values
-        this.gt = new GrandTour(this.position[0].length);
+        this.ndim = this.position[0].length
+        this.gt = new GrandTour(this.ndim);
         this.sx = d3.scaleLinear();
         this.sy = d3.scaleLinear();
         this.selected = [];
@@ -275,7 +277,7 @@ export class GrandTourView {
         this.webgl = {};
         [this.webgl.gl, this.webgl.program] = webgl_utils.initGL(
             '#' + this.canvas.attr('id'),
-            ['./shaders/vertex.glsl', './shaders/fragment.glsl']
+            ['./shaders/gt_vertex.glsl', './shaders/fragment.glsl']
         );
 
         let gl = this.webgl.gl;
@@ -315,6 +317,17 @@ export class GrandTourView {
 
         this.webgl.pointSizeLoc = gl.getUniformLocation(program, 'point_size');
         this.webgl.modeLoc = gl.getUniformLocation(program, 'mode');
+
+        this.webgl.grandTourMatrixLocs = d3.range(Math.ceil(MAX_DIM/4))
+        .map(i=>{
+            return gl.getUniformLocation(program, `gt_matrix[${i}]`);
+        });
+
+        this.webgl.positionLocs = d3.range(Math.ceil(MAX_DIM/4))
+        .map(i=>{
+            return gl.getUniformLocation(program, `position[${i}]`);
+        });
+
 
         this.setPointSize(this.pointSize || 6.0);
         this.setScale(-1,1, -1,1);
@@ -427,14 +440,30 @@ export class GrandTourView {
         let positionLoc = this.webgl.positionLoc;
         let colorBuffer = this.webgl.colorBuffer;
         let colorLoc = this.webgl.colorLoc;
-        
+        let grandTourMatrixLocs = this.webgl.grandTourMatrixLocs;
+        let positionLocs = this.webgl.positionLocs;
+
         gl.viewport(0,0, gl.canvas.width, gl.canvas.height);
         gl.clearColor(...utils.CLEAR_COLOR, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         //point location
-        // let points = this.position.map(d=>[d[0], d[1], d[2]]);
-        let points = this.gt.project(this.position, dt);
+        let points = this.position.map(d=>[d[0], d[1], d[2]]);
+        this.gt.step(dt);
+        for(let i=0; i<Math.ceil(this.ndim/4)-1; i++){//TODO remove the -1, how to send matrix partially
+            let matrix_i = this.gt.matrix.slice(i*4,i*4+4).map(row=>row.slice(0,4));
+            gl.uniformMatrix4fv(grandTourMatrixLocs[i], false, Float32Array.from(matrix_i.flat()));
+        }
+
+        for(let i=0; i<Math.ceil(this.ndim/4)-1; i++){//TODO remove the -1, how to send matrix partially
+            let position_i = this.position.slice(i*4,i*4+4);
+            gl.uniform4fv(positionLocs[i], Float32Array.from(position_i));
+        }
+
+
+
+
+        // let points = this.gt.project(this.position, dt);
         this.points = points;
 
         this.updateScale(points);
@@ -447,10 +476,10 @@ export class GrandTourView {
         }
         
         
-        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, utils.flatten(points), gl.STATIC_DRAW);
-        gl.vertexAttribPointer(positionLoc, 3, gl.FLOAT, false, 0, 0);
-        gl.enableVertexAttribArray(positionLoc);
+        // gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        // gl.bufferData(gl.ARRAY_BUFFER, utils.flatten(points), gl.STATIC_DRAW);
+        // gl.vertexAttribPointer(positionLoc, 3, gl.FLOAT, false, 0, 0);
+        // gl.enableVertexAttribArray(positionLoc);
 
         let colors;
         if (Array.isArray(this.color)){

@@ -1,4 +1,5 @@
 import { GrandTourView } from './GrandTourView';
+import { GrandTourInTheShaderView } from './GrandTourInTheShaderView';
 import * as utils from './utils';
 
 import * as d3 from 'd3';
@@ -17,45 +18,46 @@ window.onload = ()=>{
     .style('height', '100%');
 
     // example 1: json data
-    let url = 'data/iris.json';
-    d3.json(url).then((dataObj)=>{
-        let sc = d3.scaleOrdinal(d3.schemeCategory10);
+    // let url = 'data/iris.json';
+    // d3.json(url).then((dataObj)=>{
+    //     let sc = d3.scaleOrdinal(d3.schemeCategory10);
 
-        //2. Define positions
-        let position = dataObj.map(d=>[d.sepalLength, d.sepalWidth, d.petalLength, d.petalWidth]);
+    //     //2. Define positions
+    //     let position = dataObj.map(d=>[d.sepalLength, d.sepalWidth, d.petalLength, d.petalWidth]);
 
-        //centralize data (optional)
-        let center = math.mean(position, 0);
-        position = position.map(
-            row=>numeric.sub(row, center)
-        );
+    //     //centralize data (optional)
+    //     let center = math.mean(position, 0);
+    //     position = position.map(
+    //         row=>numeric.sub(row, center)
+    //     );
 
-        //3. Define colors
-        let color = dataObj.map(d=>{
-            let hex = sc(d.species);
-            let c = utils.hexToRgb(hex);
-            // let c = [255,255,255];
-            c[3] = 255; //alpha
-            return c;
-        });
+    //     //3. Define colors
+    //     let color = dataObj.map(d=>{
+    //         let hex = sc(d.species);
+    //         let c = utils.hexToRgb(hex);
+    //         // let c = [255,255,255];
+    //         c[3] = 255; //alpha
+    //         return c;
+    //     });
 
-        //4. Create view
-        let view = new GrandTourView({
-            canvas: canvas,
-            position: position,
-            color: color,
-            handle: true,
-            brush: true,
-            pointSize: 10.0,
-            scaleMode: 'center',
-        });
+    //     //4. Create view
+    //     let view = new GrandTourInTheShaderView({
+    //     // let view = new GrandTourView({
+    //         canvas: canvas,
+    //         position: position,
+    //         color: color,
+    //         handle: true,
+    //         brush: true,
+    //         pointSize: 10.0,
+    //         scaleMode: 'center',
+    //     });
 
-        //5. play
-        view.play();
+    //     //5. play
+    //     view.play();
 
-        // global variables for debugging
-        window.view = view;
-    });
+    //     // global variables for debugging
+    //     window.view = view;
+    // });
     
 
 
@@ -97,53 +99,54 @@ window.onload = ()=>{
 
     // example 3: pre-softmax data
     // where dataObj = {embeddings: [[[epoch x example x dimension]]], labels: [8,2,0,...]};
-    //
-    // let url = 'data/presoftmax.json';
-    // d3.json(url).then((dataObj)=>{
-    //     let nmax = 1000;
-    //     let sc = d3.scaleOrdinal(d3.schemeCategory10);
-    //     let position = dataObj.embeddings[0].slice(0,nmax);
+    
+    let url = 'data/presoftmax.json';
+    d3.json(url).then((dataObj)=>{
+        let nmax = 1000;
+        let sc = d3.scaleOrdinal(d3.schemeCategory10);
+        let position = dataObj.embeddings[0].slice(0,nmax);
 
-    //     //centralize data (optional)
-    //     let center = math.mean(position, 0);
-    //     position = position.map(
-    //         row=>numeric.sub(row, center)
-    //     );
+        //centralize data (optional)
+        let center = math.mean(position, 0);
+        position = position.map(
+            row=>numeric.sub(row, center)
+        );
 
-    //     let color = dataObj.labels.slice(0,nmax).map(l=>{
-    //         let hex = sc(l);
-    //         let c = utils.hexToRgb(hex);
-    //         c[3] = 255; //alpha
-    //         return c;
-    //     });
+        let color = dataObj.labels.slice(0,nmax).map(l=>{
+            let hex = sc(l);
+            let c = utils.hexToRgb(hex);
+            c[3] = 255; //alpha
+            return c;
+        });
 
-    //     let view = new GrandTourView({
-    //         canvas: canvas,
-    //         position: position,
-    //         color: color,
-    //         handle: true,
-    //         brush: true,
-    //         pointSize: 8.0,
-    //         scaleMode: 'center',
-    //     });
-    //     view.play();
+        // let view = new GrandTourView({
+        let view = new GrandTourInTheShaderView({
+            canvas: canvas,
+            position: position,
+            color: color,
+            handle: true,
+            brush: true,
+            pointSize: 8.0,
+            scaleMode: 'center',
+        });
+        view.play();
 
-    //     window.view = view;
-    //     window.dataObj = dataObj;
+        window.view = view;
+        window.dataObj = dataObj;
 
-    //     let epoch = 0;
-    //     window.addEventListener("keydown", event => {
-    //         if(event.key == 'n'){
-    //             epoch += 1;
-    //         }else if (event.key == 'p'){
-    //             epoch -= 1;
-    //         }
-    //         epoch = (epoch+dataObj.embeddings.length) % dataObj.embeddings.length;
-    //         view.position = dataObj.embeddings[epoch].slice(0,nmax);
-    //         // view.handleMax = math.max(math.abs(view.position)) * view.handleScale;
+        let epoch = 0;
+        window.addEventListener("keydown", event => {
+            if(event.key == 'n'){
+                epoch += 1;
+            }else if (event.key == 'p'){
+                epoch -= 1;
+            }
+            epoch = (epoch+dataObj.embeddings.length) % dataObj.embeddings.length;
+            view.position = dataObj.embeddings[epoch].slice(0,nmax);
+            // view.handleMax = math.max(math.abs(view.position)) * view.handleScale;
 
-    //     });
-    // });
+        });
+    });
 
 
 
