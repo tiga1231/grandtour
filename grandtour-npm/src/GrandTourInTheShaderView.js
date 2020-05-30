@@ -7,7 +7,7 @@ import { GrandTour } from './GrandTour';
 import * as webgl_utils from './webgl-utils';
 
 const MAX_DIM = 16;
-
+const ALPHA_UNSELECTED = 10;
 export class GrandTourInTheShaderView {
 
 
@@ -19,13 +19,16 @@ export class GrandTourInTheShaderView {
         for (let k in kwargs){
             this[k] = kwargs[k];
         }
-
         //default values
         this.t = this.t || 0;
         this.scaleMode = this.scaleMode || 'center';
-        this.handleScale = this.handleScale || 1.1;
+        this.handleScale = this.handleScale || 1.1; //relative to max of data in all dimenstions
+        this._zoomFator = 1.0;
+        this._pointSize = 0.0044 * Math.min(window.innerWidth, window.innerHeight) * window.devicePixelRatio;
+        this._pointSize0 = this._pointSize;
         //init values
-        this.ndim = this.position[0].length
+        this.ndim = this.position[0].length;
+        this.npoint = this.position.length;
         this.gt = new GrandTour(this.ndim);
         this.sx = d3.scaleLinear();
         this.sy = d3.scaleLinear();
@@ -34,6 +37,27 @@ export class GrandTourInTheShaderView {
         this.init();
     }
 
+    get pointSize(){
+        return this._pointSize;
+    }
+
+    set pointSize(s){
+        this._pointSize = s;
+        let gl = this.webgl.gl;
+        let pointSizeLoc = this.webgl.pointSizeLoc;
+        gl.uniform1f(pointSizeLoc, s * devicePixelRatio);
+    }
+
+    get zoomFator(){
+        return this._zoomFator;
+    }
+
+    set zoomFator(z){
+        this._zoomFator = z;
+        let v = this.vmax / z;
+        this.setScale(-v,v,-v,v);
+        this.pointSize = this._pointSize0 * Math.sqrt(z);
+    }
 
     init(){
         this.initGL();
@@ -57,6 +81,18 @@ export class GrandTourInTheShaderView {
         if(this.handle === true){
             this.initHandle();
         }
+        if(this.zoom === true){
+            this.initZoom();
+        }
+    }
+
+    initZoom(){
+        let zoom = d3.zoom().on("zoom", ()=>{
+            let k = d3.event.transform.k;
+            this.zoomFator = k;
+        });
+
+        this.svg.call(zoom);
     }
 
 
@@ -125,6 +161,10 @@ export class GrandTourInTheShaderView {
 
 
     initBrush(){
+        //TODO fix me!
+        //in shader: update brush bounding box = [xmin, xmax, ymin, ymax] in data coord;
+        //TODO how to update centroid in shader??
+        //possible(?): download the 3d position of a subset from shader
         
         let that = this;
         this.brush = d3.brush()
@@ -133,57 +173,64 @@ export class GrandTourInTheShaderView {
             .style('opacity', 1.0)
             // .style('pointer-events', 'auto');
         })
-        .on('brush', function(){
+        .on('brush', ()=>{
             
             let s = d3.event.selection;
             if(s !== null){
-                let x0 = that.sx.invert(s[0][0]);
-                let x1 = that.sx.invert(s[1][0]);
-                let y0 = that.sy.invert(s[0][1]);
-                let y1 = that.sy.invert(s[1][1]);
+                let x0 = this.sx.invert(s[0][0]);
+                let x1 = this.sx.invert(s[1][0]);
+                let y0 = this.sy.invert(s[0][1]);
+                let y1 = this.sy.invert(s[1][1]);
                 if(y0 > y1){
-                    let tmp = y1;
-                    y1 = y0;
-                    y0 = tmp;
+                    [y0,y1] = [y1,y0];
                 }
-
+                let points = this.gt.project(this.position, 0);
                 let count = 0;
                 let centroid = undefined;
-                for(let i=0; i<that.points.length; i++){
-                    let x = that.points[i][0];
-                    let y = that.points[i][1];
-                    let c = that.color[i];
+                for(let i=0; i<this.npoint; i++){
+                    let x = points[i][0];
+                    let y = points[i][1];
+                    let c = this.color[i];
                     let selected = (x0 < x && x < x1 && y0 < y && y < y1);
-                    that.selected[i] = selected;
-                    c[3] = selected ? 255 : 50; //update color
+                    this.selected[i] = selected;
+                    c[3] = selected ? 255 : ALPHA_UNSELECTED; //update color
 
                     //update centroid
                     if(selected){
                         count += 1;
                         if(centroid === undefined){
-                            centroid = that.position[i].slice();
+                            centroid = this.position[i].slice();
                         }else{
-                            centroid = numeric.add(centroid, that.position[i]);
+                            centroid = numeric.add(centroid, this.position[i]);
                         }
                     }
                 }
+                this.updateColor(this.color);
+
+
                 if (count > 0){
                     centroid = numeric.div(centroid, count);
                 }else{
                     centroid = null;
                 }
-                that.count = count;
-                that.centroid = centroid;
+                this.count = count;
+                this.centroid = centroid;
             }
         })
-        .on('end', function(){
+        .on('end', ()=>{
             that.gBrush.style('opacity', 0.0)
             // .style('pointer-events', 'none');
-            if(d3.event.selection === null || that.count == 0){ //brushed cleared
-                for(let i=0; i<that.points.length; i++){
-                    let c = that.color[i];
+            if(d3.event.selection === null || this.count == 0){ //brushed cleared
+                for(let i=0; i<this.npoint; i++){
+                    let c = this.color[i];
                     c[3] = 255;
                 }
+                let gl = this.webgl.gl;
+                gl.bindBuffer(gl.ARRAY_BUFFER, this.webgl.colorBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER,
+                              new Uint8Array(utils.flatten(this.color)), gl.STATIC_DRAW);
+                gl.vertexAttribPointer(this.webgl.colorLoc, 4, gl.UNSIGNED_BYTE, true, 0, 0);
+                gl.enableVertexAttribArray(this.webgl.colorLoc);
             }
 
         });
@@ -273,6 +320,22 @@ export class GrandTourInTheShaderView {
 
     }
 
+    updatePosition(position){
+        //upload position
+        let gl = this.webgl.gl;
+        let positionBuffers = this.webgl.positionBuffers;
+        let positionLocs = this.webgl.positionLocs;
+        for(let i=0; i<Math.ceil(this.ndim/4); i++){
+            let position_i = position.map(row=>row.slice(i*4,i*4+4));
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffers[i]);
+            gl.bufferData(gl.ARRAY_BUFFER, utils.flatten(position_i), gl.STATIC_DRAW);
+            gl.vertexAttribPointer(positionLocs[i], position_i[0].length, gl.FLOAT, false, 0, 0);
+            gl.enableVertexAttribArray(positionLocs[i]);
+        }
+        // this.vmax = d3.max( this.position.map(d=>numeric.norm2(d)) );
+    }
+
+
     initGL(){
         this.webgl = {};
         [this.webgl.gl, this.webgl.program] = webgl_utils.initGL(
@@ -300,14 +363,6 @@ export class GrandTourInTheShaderView {
         this.webgl.colorBuffer = gl.createBuffer();
         this.webgl.colorLoc = gl.getAttribLocation(program, 'a_color');
 
-        this.webgl.positionBuffer = gl.createBuffer();
-        this.webgl.positionLoc = gl.getAttribLocation(program, 'a_position');
-
-        this.webgl.pointSizeLoc = gl.getUniformLocation(program, 'point_size');
-
-        this.webgl.canvasWidthLoc = gl.getUniformLocation(program, 'canvasWidth');
-        this.webgl.canvasHeightLoc = gl.getUniformLocation(program, 'canvasHeight');
-
         this.webgl.xDataMinLoc = gl.getUniformLocation(program, 'xDataMin');
         this.webgl.xDataMaxLoc = gl.getUniformLocation(program, 'xDataMax');
         this.webgl.yDataMinLoc = gl.getUniformLocation(program, 'yDataMin');
@@ -316,29 +371,57 @@ export class GrandTourInTheShaderView {
         this.webgl.zDataMaxLoc = gl.getUniformLocation(program, 'zDataMax');
 
         this.webgl.pointSizeLoc = gl.getUniformLocation(program, 'point_size');
-        this.webgl.modeLoc = gl.getUniformLocation(program, 'mode');
 
-        this.webgl.grandTourMatrixLocs = d3.range(Math.ceil(MAX_DIM/4))
+        this.webgl.grandTourMatrixLocs = d3.range(Math.ceil(this.ndim/4))
         .map(i=>{
             return gl.getUniformLocation(program, `gt_matrix[${i}]`);
         });
 
-        this.webgl.positionLocs = d3.range(Math.ceil(MAX_DIM/4))
+        this.webgl.positionLocs = d3.range(Math.ceil(this.ndim/4))
         .map(i=>{
-            return gl.getUniformLocation(program, `position[${i}]`);
+            return gl.getAttribLocation(program, `position_${i}`);
         });
+        this.webgl.positionBuffers = d3.range(Math.ceil(this.ndim/4)).map(i=>gl.createBuffer());
 
 
-        this.setPointSize(this.pointSize || 6.0);
-        this.setScale(-1,1, -1,1);
+        this.updatePosition(this.position);
+        this.vmax = d3.max( this.position.map(d=>numeric.norm2(d)) );
+
+
+        
+        if (!Array.isArray(this.color)){
+            //hex string to GRBA(0-255)
+            let color = [...utils.hexToRgb(this.color), 255];
+            let colors = d3.range(this.npoint).map(d=>color);
+            this.color = colors;
+        }
+        this.updateColor(this.color);
+        
+
+
+        this.pointSize = this._pointSize;
+        this.setScale(-this.vmax, this.vmax, -this.vmax, this.vmax, -this.vmax, this.vmax);
     }
 
-    setScale(xmin, xmax, ymin, ymax){
+    updateColor(color){
+        let gl = this.webgl.gl;
+        let colorLoc = this.webgl.colorLoc;
+        let colorBuffer = this.webgl.colorBuffer;
+        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER,
+                      new Uint8Array(utils.flatten(color)), gl.STATIC_DRAW);
+        gl.vertexAttribPointer(colorLoc, 4, gl.UNSIGNED_BYTE, true, 0, 0);
+        gl.enableVertexAttribArray(colorLoc);
+
+    }
+    setScale(xmin, xmax, ymin, ymax, zmin, zmax){
         let gl = this.webgl.gl;
         let xDataMinLoc = this.webgl.xDataMinLoc;
         let xDataMaxLoc = this.webgl.xDataMaxLoc;
         let yDataMinLoc = this.webgl.yDataMinLoc;
         let yDataMaxLoc = this.webgl.yDataMaxLoc;
+        let zDataMinLoc = this.webgl.zDataMinLoc;
+        let zDataMaxLoc = this.webgl.zDataMaxLoc;
 
         gl.uniform1f(xDataMinLoc, xmin);
         gl.uniform1f(xDataMaxLoc, xmax);
@@ -352,13 +435,14 @@ export class GrandTourInTheShaderView {
         .domain([ymin, ymax])
         .range([this.canvas.attr('height')/devicePixelRatio, 0]);
 
+        if(zmin !== undefined &&  zmax !== undefined){
+            gl.uniform1f(zDataMinLoc, zmin);
+            gl.uniform1f(zDataMaxLoc, zmax);
+        }
+
     }
 
-    setPointSize(s){
-        let gl = this.webgl.gl;
-        let pointSizeLoc = this.webgl.pointSizeLoc;
-        gl.uniform1f(pointSizeLoc, s * devicePixelRatio);
-    }
+    
 
 
     updateScale(points){
@@ -414,6 +498,7 @@ export class GrandTourInTheShaderView {
             this.ymin = -ymax;
             this.ymax = ymax;
         }
+
         this.setScale(this.xmin, this.xmax, this.ymin, this.ymax);
     }
 
@@ -436,89 +521,45 @@ export class GrandTourInTheShaderView {
     plot(dt){
 
         let gl = this.webgl.gl;
-        let positionBuffer = this.webgl.positionBuffer;
-        let positionLoc = this.webgl.positionLoc;
-        let colorBuffer = this.webgl.colorBuffer;
-        let colorLoc = this.webgl.colorLoc;
+        // let positionBuffer = this.webgl.positionBuffer;
+        // let positionLoc = this.webgl.positionLoc;
         let grandTourMatrixLocs = this.webgl.grandTourMatrixLocs;
-        let positionLocs = this.webgl.positionLocs;
 
         gl.viewport(0,0, gl.canvas.width, gl.canvas.height);
         gl.clearColor(...utils.CLEAR_COLOR, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         //point location
-        let points = this.position.map(d=>[d[0], d[1], d[2]]);
-        this.gt.step(dt);
-        for(let i=0; i<Math.ceil(this.ndim/4)-1; i++){//TODO remove the -1, how to send matrix partially
-            let matrix_i = this.gt.matrix.slice(i*4,i*4+4).map(row=>row.slice(0,4));
-            gl.uniformMatrix4fv(grandTourMatrixLocs[i], false, Float32Array.from(matrix_i.flat()));
-        }
-
-        for(let i=0; i<Math.ceil(this.ndim/4)-1; i++){//TODO remove the -1, how to send matrix partially
-            let position_i = this.position.slice(i*4,i*4+4);
-            gl.uniform4fv(positionLocs[i], Float32Array.from(position_i));
-        }
-
-
-
-
+        // let points = this.position.map(d=>[d[0], d[1], d[2]]);
         // let points = this.gt.project(this.position, dt);
-        this.points = points;
 
-        this.updateScale(points);
-        this.normalizeDepth(points);
+        this.gt.step(dt);
+        for(let i=0; i<Math.ceil(this.ndim/4); i++){
+            let matrix_i = this.gt.matrix.slice(i*4,i*4+4).map(row=>row.slice(0,4));
+            if(matrix_i.length < 4){
+                for(let i = matrix_i.length; i<4; i++){
+                    matrix_i[i] = [0,0,0,0];
+                    matrix_i[i][i] = 1.0;
+                }
+            }
+            gl.uniformMatrix4fv(grandTourMatrixLocs[i], false, utils.flatten(matrix_i));
+        }
+
         if(this.handle !== undefined && this.handle !== false){
             this.updateHandle(this.position);
         }
         if(this.brush !== undefined && this.brush !== false){
             this.updateCentroid(this.position);
         }
-        
-        
-        // gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-        // gl.bufferData(gl.ARRAY_BUFFER, utils.flatten(points), gl.STATIC_DRAW);
-        // gl.vertexAttribPointer(positionLoc, 3, gl.FLOAT, false, 0, 0);
-        // gl.enableVertexAttribArray(positionLoc);
+        gl.drawArrays(gl.POINTS, 0, this.npoint);
 
-        let colors;
-        if (Array.isArray(this.color)){
-            colors = this.color;
-        }else{ //hex string
-            let color = [...utils.hexToRgb(this.color), 255];
-            colors = d3.range(points.length).map(d=>color);
-            this.color = colors;
-        }
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER,
-                      new Uint8Array(utils.flatten(colors)), gl.STATIC_DRAW);
-        gl.vertexAttribPointer(colorLoc, 4, gl.UNSIGNED_BYTE, true, 0, 0);
-        gl.enableVertexAttribArray(colorLoc);
-
-
-        this.setMode('point');
-        gl.drawArrays(gl.POINTS, 0, points.length);
-
-        if(this.shouldDrawLines){
-            this.setMode('line');
-            gl.drawArrays(gl.LINES, 0, points.length);
-        }
-    }
-
-    setMode(m){
-        let gl = this.webgl.gl;
-        let modeLoc = this.webgl.modeLoc;
-        if(m == 'point'){
-            gl.uniform1i(modeLoc, 0);
-        }else if(m == 'line'){
-            gl.uniform1i(modeLoc, 1);
-        }
+       
     }
 
 
     play(t=0){
         let dt = t - this.t;
+        // console.log(1000/dt);//show FPS
         this.t = t;
         this.plot(dt);
         requestAnimationFrame(this.play.bind(this));

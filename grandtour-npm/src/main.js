@@ -84,40 +84,48 @@ window.onload = ()=>{
     //   0, 8, 1, 9, 2, 10, 3, 11, 4, 12, 5, 13, 6, 14, 7, 15
     // ];
     // let tesseract = indices.map((i)=>basePoints[i]);
-    // let view = new GrandTourView({
+    // // let view = new GrandTourView({
+    // let view = new GrandTourInTheShaderView({
     //     canvas: canvas,
     //     position: tesseract,
     //     color: '#1f78b4',
     //     shouldDrawLines: true,
     //     handle: true,
     //     brush: true,
-    //     pointSize: 10.0
+    //     pointSize: 10.0,
     // });
     // view.play();
     // window.view = view;
 
 
-    // example 3: pre-softmax data
-    // where dataObj = {embeddings: [[[epoch x example x dimension]]], labels: [8,2,0,...]};
+    // example 3: pre-softmax data, where dataObj = {embeddings: [[[epoch x example x dimension]]], labels: [8,2,0,...]};
     
     let url = 'data/presoftmax.json';
     d3.json(url).then((dataObj)=>{
-        let nmax = 1000;
         let sc = d3.scaleOrdinal(d3.schemeCategory10);
-        let position = dataObj.embeddings[0].slice(0,nmax);
+        let position = dataObj.embeddings[0];
 
-        //centralize data (optional)
-        let center = math.mean(position, 0);
-        position = position.map(
-            row=>numeric.sub(row, center)
-        );
+        // //centralize data (optional)
+        // let center = math.mean(position, 0);
+        // position = position.map(
+        //     row=>numeric.sub(row, center)
+        // );
 
-        let color = dataObj.labels.slice(0,nmax).map(l=>{
+        let color = dataObj.labels.map(l=>{
             let hex = sc(l);
             let c = utils.hexToRgb(hex);
             c[3] = 255; //alpha
             return c;
         });
+
+        // position = position.concat(
+        //     dataObj.embeddings[5],
+        //     dataObj.embeddings[99],
+        // );
+        // color = color.concat(
+        //     color.map(d=>d.slice()),
+        //     color.map(d=>d.slice()),
+        // );
 
         // let view = new GrandTourView({
         let view = new GrandTourInTheShaderView({
@@ -126,8 +134,8 @@ window.onload = ()=>{
             color: color,
             handle: true,
             brush: true,
-            pointSize: 8.0,
             scaleMode: 'center',
+            zoom: true,
         });
         view.play();
 
@@ -135,16 +143,33 @@ window.onload = ()=>{
         window.dataObj = dataObj;
 
         let epoch = 0;
+        let isPlaying = true;
         window.addEventListener("keydown", event => {
-            if(event.key == 'n'){
-                epoch += 1;
-            }else if (event.key == 'p'){
-                epoch -= 1;
-            }
-            epoch = (epoch+dataObj.embeddings.length) % dataObj.embeddings.length;
-            view.position = dataObj.embeddings[epoch].slice(0,nmax);
-            // view.handleMax = math.max(math.abs(view.position)) * view.handleScale;
+            console.log(event.key);
+            if(event.key == 'n' || event.key == 'p'){
+                if(event.key == 'n'){
+                    epoch += 1;
+                }else if (event.key == 'p'){
+                    epoch -= 1;
+                }
+                epoch = (epoch+dataObj.embeddings.length) % dataObj.embeddings.length;
+                view.position = dataObj.embeddings[epoch];
+                view.updatePosition(view.position);
+                
 
+
+                // view.handleMax = math.max(math.abs(view.position)) * view.handleScale;
+            }else if(event.key == ' '){
+                isPlaying = !isPlaying;
+                if(isPlaying){
+                    view.gt.STEPSIZE = view.gt.STEPSIZE0;
+                }else{
+                    view.gt.STEPSIZE0 = view.gt.STEPSIZE;
+                    view.gt.STEPSIZE = 0;
+                }
+                
+
+            }
         });
     });
 

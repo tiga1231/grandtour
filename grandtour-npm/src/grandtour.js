@@ -49,7 +49,7 @@ export class GrandTour {
             let k = -1;
             for (let i=0; i<this.ndim; i++) {
                 for (let j=0; j<this.ndim; j++) {
-                    if (i!==j && (true || i<=3 || j<=3) ) {
+                    if (i!==j && (false || i<=3 || j<=3) ) {
                         k++;
                         this._matrix = this.multiplyRotationMatrix(
                             this._matrix, i, j, angles[k]);
@@ -77,8 +77,9 @@ export class GrandTour {
         let sin = Math.sin(theta);
         let cos = Math.cos(theta);
         // var res = matrix.map(d=>d.slice());
-        let columnI = matrix.map((d)=>d[i]);
+        let columnI = matrix.map((d)=>d[i]);//TODO simplify this
         let columnJ = matrix.map((d)=>d[j]);
+
         for (let rowIndex=0; rowIndex<matrix.length; rowIndex++) {
             matrix[rowIndex][i] = columnI[rowIndex]*cos + columnJ[rowIndex]*(-sin);
             matrix[rowIndex][j] = columnI[rowIndex]*sin + columnJ[rowIndex]*cos;
