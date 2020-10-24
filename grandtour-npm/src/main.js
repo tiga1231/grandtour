@@ -1,5 +1,4 @@
 import { GrandTourView } from './GrandTourView';
-import { GrandTourInTheShaderView } from './GrandTourInTheShaderView';
 import * as utils from './utils';
 
 import * as d3 from 'd3';
@@ -41,7 +40,7 @@ window.onload = ()=>{
     //     });
 
     //     //4. Create view
-    //     let view = new GrandTourInTheShaderView({
+    //     let view = new GrandTourView({
     //     // let view = new GrandTourView({
     //         canvas: canvas,
     //         position: position,
@@ -85,7 +84,7 @@ window.onload = ()=>{
     // ];
     // let tesseract = indices.map((i)=>basePoints[i]);
     // // let view = new GrandTourView({
-    // let view = new GrandTourInTheShaderView({
+    // let view = new GrandTourView({
     //     canvas: canvas,
     //     position: tesseract,
     //     color: '#1f78b4',
@@ -100,82 +99,137 @@ window.onload = ()=>{
 
     // example 3: pre-softmax data, where dataObj = {embeddings: [[[epoch x example x dimension]]], labels: [8,2,0,...]};
     
-    let url = 'data/presoftmax.json';
-    d3.json(url).then((dataObj)=>{
-        let sc = d3.scaleOrdinal(d3.schemeCategory10);
-        let position = dataObj.embeddings[0];
+    // let url = 'data/presoftmax.json';
+    // d3.json(url).then((dataObj)=>{
+    //     let sc = d3.scaleOrdinal(d3.schemeCategory10);
+    //     let epoch = 99;
+    //     let position = dataObj.embeddings[epoch];
 
-        // //centralize data (optional)
-        // let center = math.mean(position, 0);
-        // position = position.map(
-        //     row=>numeric.sub(row, center)
-        // );
+    //     //centralize data (optional)
+    //     // let center = math.mean(position, 0);
+    //     // position = position.map(
+    //     //     row=>numeric.sub(row, center)
+    //     // );
 
-        let color = dataObj.labels.map(l=>{
-            let hex = sc(l);
-            let c = utils.hexToRgb(hex);
-            c[3] = 255; //alpha
-            return c;
-        });
+    //     let color = dataObj.labels.map(l=>{
+    //         let hex = sc(l);
+    //         let c = utils.hexToRgb(hex);
+    //         c[3] = 255; //alpha
+    //         return c;
+    //     });
 
-        // position = position.concat(
-        //     dataObj.embeddings[5],
-        //     dataObj.embeddings[99],
-        // );
-        // color = color.concat(
-        //     color.map(d=>d.slice()),
-        //     color.map(d=>d.slice()),
-        // );
+    //     // let view = new GrandTourView({
+    //     let view = new GrandTourView({
+    //         canvas: canvas,
+    //         position: position,
+    //         color: color,
+    //         handle: true,
+    //         brush: true,
+    //         scaleMode: 'center',
+    //         zoom: true,
+    //     });
+    //     view.play();
 
-        // let view = new GrandTourView({
-        let view = new GrandTourInTheShaderView({
-            canvas: canvas,
-            position: position,
-            color: color,
-            handle: true,
-            brush: true,
-            scaleMode: 'center',
-            zoom: true,
-        });
-        view.play();
+    //     window.view = view;
+    //     window.dataObj = dataObj;
 
-        window.view = view;
-        window.dataObj = dataObj;
-
-        let epoch = 0;
-        let isPlaying = true;
-        window.addEventListener("keydown", event => {
-            console.log(event.key);
-            if(event.key == 'n' || event.key == 'p'){
-                if(event.key == 'n'){
-                    epoch += 1;
-                }else if (event.key == 'p'){
-                    epoch -= 1;
-                }
-                epoch = (epoch+dataObj.embeddings.length) % dataObj.embeddings.length;
-                view.position = dataObj.embeddings[epoch];
-                view.updatePosition(view.position);
-                
+    //     window.addEventListener("keydown", event => {
+    //         console.log(event.key);
+    //         if(event.key == 'n' || event.key == 'p'){
+    //             if(event.key == 'n'){
+    //                 epoch += 1;
+    //             }else if (event.key == 'p'){
+    //                 epoch -= 1;
+    //             }
+    //             epoch = (epoch+dataObj.embeddings.length) % dataObj.embeddings.length;
+    //             view.position = dataObj.embeddings[epoch];
+    //             view.updatePosition(view.position);
+    //             // view.handleMax = math.max(math.abs(view.position)) * view.handleScale;
+    //         }
+    //     });
+    // });
 
 
-                // view.handleMax = math.max(math.abs(view.position)) * view.handleScale;
-            }else if(event.key == ' '){
-                isPlaying = !isPlaying;
-                if(isPlaying){
-                    view.gt.STEPSIZE = view.gt.STEPSIZE0;
-                }else{
-                    view.gt.STEPSIZE0 = view.gt.STEPSIZE;
-                    view.gt.STEPSIZE = 0;
-                }
-                
+    // exanple 4: klein bottle (4-D non-intersecting immersion)
+    // https://en.wikipedia.org/wiki/Klein_bottle
+    const R = 1.0;
+    const P = 2.0;
+    let e = 0.01;
 
+    let [M,N] = [30,60];
+    let s = d3.range(M).map(d=>d/M * Math.PI*2);
+    let t = d3.range(N).map(d=>d/N * Math.PI*2);
+    let theta = [];
+    let v = [];
+    for(let si of s){
+        for(let ti of t){
+            theta.push(si);
+            v.push(ti);
+        }
+    }
+    let cos_theta = numeric.cos(theta);
+    let sin_theta = numeric.sin(theta);
+
+    let cos_v = numeric.cos(v);
+    let sin_v = numeric.sin(v);
+
+    let theta_half = numeric.mul(theta, 0.5);
+    let cos_theta_half = numeric.cos(theta_half);
+    let sin_theta_half = numeric.sin(theta_half);
+
+    let v_double = numeric.mul(v, 2);
+    let cos_v_double = numeric.cos(v_double);
+    let sin_v_double = numeric.sin(v_double);
+
+    let coscos = numeric.mul(cos_theta_half, cos_v);
+    let sinsin = numeric.mul(sin_theta_half, sin_v_double);
+
+    let sincos = numeric.mul(sin_theta_half, cos_v);
+    let cossin = numeric.mul(cos_theta_half, sin_v_double);
+
+    let a = numeric.mul(P, numeric.add(1.0, numeric.mul(e, sin_v)));
+
+    let x = numeric.mul(R, numeric.sub(coscos, sinsin));
+    let y = numeric.mul(R, numeric.add(sincos, cossin));
+    let z = numeric.mul(cos_theta, a);
+    let w = numeric.mul(sin_theta, a);
+
+    let position = d3.range(x.length).map(i=>[x[i], y[i], z[i], w[i] ]);
+
+
+    let color ='#335577';
+
+    let view = new GrandTourView({
+        canvas: canvas,
+        position: position,
+        color: color,
+        handle: true,
+        brush: false,
+        zoom: true,
+        pointSize: 3,
+        mode: 'point',
+    });
+    view.play();
+    window.view = view;
+    window.theta = theta;
+    window.x = x;
+
+
+    let isPlaying = true;
+    window.addEventListener("keydown", event => {
+        console.log(event.key);
+        if(event.key == ' '){
+            isPlaying = !isPlaying;
+            if(isPlaying){
+                view.gt.STEPSIZE = view.gt.STEPSIZE0;
+            }else{
+                view.gt.STEPSIZE0 = view.gt.STEPSIZE;
+                view.gt.STEPSIZE = 0;
             }
-        });
+        }
     });
 
 
-
-    //resize handler
     window.onresize = ()=>{
         view.isWindowResized = true;
         view.canvas

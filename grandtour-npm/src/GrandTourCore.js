@@ -4,14 +4,13 @@ import * as math from 'mathjs';
 
 window.math = math;
 
-export class GrandTour {
+export class GrandTourCore {
     constructor(ndim){
         this._ndim = ndim || 2;
 
         this.STEPSIZE = 0.0001 / this._ndim;
         this._matrix = math.identity(this.ndim)._data;
-
-        this.thetas = GrandTour.initThetas(ndim);
+        this.thetas = GrandTourCore.initThetas(ndim);
 
     }
 
