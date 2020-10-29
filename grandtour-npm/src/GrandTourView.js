@@ -22,14 +22,14 @@ export class GrandTourView {
         this.t = this.t || 0;
         this.handleScale = this.handleScale || 1.1; //relative to max of data in all dimenstions
         this.pointSize0 = kwargs.pointSize;
-        this._zoomFator = 1.0;
-
+        this._zoomFactor = 1.0;
+        this.transform = d3.zoomIdentity;
         // this._pointSize = kwargs._pointSize || 0.0044 * Math.min(window.innerWidth, window.innerHeight) * window.devicePixelRatio;
         // this._pointSize = this.pointSize;
         //init values
         this.ndim = this.position[0].length;
         this.npoint = this.position.length;
-        this.gt = new GrandTourCore(this.ndim);
+        this.gt = new GrandTourCore(this.ndim, kwargs.speed);
         this.sx = d3.scaleLinear();
         this.sy = d3.scaleLinear();
         this.selected = [];
@@ -55,16 +55,44 @@ export class GrandTourView {
         }
     }
 
-    get zoomFator(){
-        return this._zoomFator;
+
+    get zoomFactor(){
+        return this._zoomFactor;
     }
 
-    set zoomFator(z){
-        this._zoomFator = z;
-        let v = this.vmax / z;
-        this.setScale(-v,v,-v,v);
+    set zoomFactor(z){
+        this._zoomFactor = z;
         this.pointSize = this.pointSize0 * Math.sqrt(z);
     }
+
+
+    // get xOffset(){
+    //     return this._xOffset;
+    // }
+
+    // set xOffset(x){
+    //     this._xOffset = x;
+    //     let v = this.vmax / this._zoomFactor;
+    //     this.setScale(
+    //         -v+this.xOffset, v+this.xOffset,
+    //         -v+this.yOffset,v+this.yOffset
+    //     );
+    // }
+
+
+    // get yOffset(){
+    //     return this._yOffset;
+    // }
+
+    // set yOffset(y){
+    //     this._yOffset = y;
+    //     let v = this.vmax / this._zoomFactor;
+    //     this.setScale(
+    //         -v+this.xOffset, v+this.xOffset,
+    //         -v+this.yOffset,v+this.yOffset
+    //     );
+    // }
+
 
     init(){
         this.initGL();
@@ -94,10 +122,12 @@ export class GrandTourView {
     }
 
     initZoom(){
-        let zoom = d3.zoom().on("zoom", ()=>{
-            let k = d3.event.transform.k;
-            this.zoomFator = k;
-            console.log(d3.event.transform);
+        let zoom = d3.zoom()
+        .on('zoom', ()=>{
+            this.transform = d3.event.transform;
+            this.zoomFactor = this.transform.k;
+            let v = this.vmax;
+            this.setScale(-v,v,-v,v);
         });
         this.svg.call(zoom);
     }
@@ -393,7 +423,6 @@ export class GrandTourView {
 
         this.updatePosition(this.position);
         this.vmax = d3.max( this.position.map(d=>numeric.norm2(d)) );
-
         if (!Array.isArray(this.color)){
             //hex string to GRBA(0-255)
             let c = utils.hexToRgb(this.color);
@@ -429,10 +458,6 @@ export class GrandTourView {
         let zDataMinLoc = this.webgl.zDataMinLoc;
         let zDataMaxLoc = this.webgl.zDataMaxLoc;
 
-        gl.uniform1f(xDataMinLoc, xmin);
-        gl.uniform1f(xDataMaxLoc, xmax);
-        gl.uniform1f(yDataMinLoc, ymin);
-        gl.uniform1f(yDataMaxLoc, ymax);
 
         this.sx
         .domain([xmin, xmax])
@@ -440,6 +465,22 @@ export class GrandTourView {
         this.sy
         .domain([ymin, ymax])
         .range([this.canvas.attr('height')/devicePixelRatio, 0]);
+
+        //handle zoom event;
+        this.sx = this.transform.rescaleX(this.sx);
+        this.sy = this.transform.rescaleY(this.sy);
+
+        gl.uniform1f(xDataMinLoc, this.sx.domain()[0]);
+        gl.uniform1f(xDataMaxLoc, this.sx.domain()[1]);
+        gl.uniform1f(yDataMinLoc, this.sy.domain()[0]);
+        gl.uniform1f(yDataMaxLoc, this.sy.domain()[1]);
+
+        // this.sx
+        // .domain([xmin, xmax])
+        // .range([0, this.canvas.attr('width')/devicePixelRatio]);
+        // this.sy
+        // .domain([ymin, ymax])
+        // .range([this.canvas.attr('height')/devicePixelRatio, 0]);
 
         if(zmin !== undefined &&  zmax !== undefined){
             gl.uniform1f(zDataMinLoc, zmin);
@@ -517,7 +558,7 @@ export class GrandTourView {
         // let points = this.position.map(d=>[d[0], d[1], d[2]]);
         // let points = this.gt.project(this.position, dt);
 
-        this.gt.step(dt);
+        this.gt.step(dt / Math.sqrt(this.zoomFactor) );
         for(let i=0; i<Math.ceil(this.ndim/4); i++){
             let matrix_i = this.gt.matrix.slice(i*4,i*4+4).map(row=>row.slice(0,4));
             if(matrix_i.length < 4){

@@ -5,10 +5,10 @@ import * as math from 'mathjs';
 window.math = math;
 
 export class GrandTourCore {
-    constructor(ndim){
+    constructor(ndim, STEPSIZE=0){
         this._ndim = ndim || 2;
 
-        this.STEPSIZE = 0.0001 / this._ndim;
+        this.STEPSIZE = STEPSIZE || 0.0001 / this._ndim;
         this._matrix = math.identity(this.ndim)._data;
         this.thetas = GrandTourCore.initThetas(ndim);
 
