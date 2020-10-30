@@ -46,7 +46,6 @@ export class GrandTourView {
     }
 
     set pointSize(s){
-        console.log(s);
         this._pointSize = s;
         if(this.webgl){
             let gl = this.webgl.gl;
@@ -591,7 +590,7 @@ export class GrandTourView {
 
     play(t=0){
         let dt = t - this.t;
-        // console.log(1000/dt);//show FPS
+        // console.log(`${(1000/dt).toFixed(2)} FPS`);
         this.t = t;
         this.plot(dt);
         requestAnimationFrame(this.play.bind(this));

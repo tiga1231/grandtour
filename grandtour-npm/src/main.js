@@ -4,6 +4,9 @@ import * as utils from './utils';
 import * as d3 from 'd3';
 window.d3 = d3;
 
+// import * as p5 from 'p5';
+// const P5 = new p5();
+// window.P5 = P5;
 
 window.onload = ()=>{
 
@@ -152,105 +155,111 @@ window.onload = ()=>{
 
     // exanple 4: klein bottle (4-D non-intersecting immersion)
     // https://en.wikipedia.org/wiki/Klein_bottle
-    // const R = 1.0;
-    // const P = 2.0;
-    // let e = 0.01;
+    const R = 1.0;
+    const P = 2.0;
+    let e = 0.01;
 
-    // let [M,N] = [30,60];
-    // let s = d3.range(M).map(d=>d/M * Math.PI*2);
-    // let t = d3.range(N).map(d=>d/N * Math.PI*2);
-    // let theta = [];
-    // let v = [];
-    // for(let si of s){
-    //     for(let ti of t){
-    //         theta.push(si);
-    //         v.push(ti);
-    //     }
-    // }
-    // let cos_theta = numeric.cos(theta);
-    // let sin_theta = numeric.sin(theta);
+    let [M,N] = [100,150];
+    let s = d3.range(M).map(d=>d/M * Math.PI*2);
+    let t = d3.range(N).map(d=>d/N * Math.PI*2);
+    let theta = [];
+    let v = [];
+    // let color =[];
 
-    // let cos_v = numeric.cos(v);
-    // let sin_v = numeric.sin(v);
+    for(let si of s){
+        for(let ti of t){
+            theta.push(si);
+            v.push(ti);
+            // color.push([
+            //     100*P5.noise(si*0, ti),
+            //     160*P5.noise(si*1.3, ti*0),
+            //     150*P5.noise(si, ti*1.41), 
+            //     255,
+            // ]);
+        }
+    }
+    let cos_theta = numeric.cos(theta);
+    let sin_theta = numeric.sin(theta);
 
-    // let theta_half = numeric.mul(theta, 0.5);
-    // let cos_theta_half = numeric.cos(theta_half);
-    // let sin_theta_half = numeric.sin(theta_half);
+    let cos_v = numeric.cos(v);
+    let sin_v = numeric.sin(v);
 
-    // let v_double = numeric.mul(v, 2);
-    // let cos_v_double = numeric.cos(v_double);
-    // let sin_v_double = numeric.sin(v_double);
+    let theta_half = numeric.mul(theta, 0.5);
+    let cos_theta_half = numeric.cos(theta_half);
+    let sin_theta_half = numeric.sin(theta_half);
 
-    // let coscos = numeric.mul(cos_theta_half, cos_v);
-    // let sinsin = numeric.mul(sin_theta_half, sin_v_double);
+    let v_double = numeric.mul(v, 2);
+    let cos_v_double = numeric.cos(v_double);
+    let sin_v_double = numeric.sin(v_double);
 
-    // let sincos = numeric.mul(sin_theta_half, cos_v);
-    // let cossin = numeric.mul(cos_theta_half, sin_v_double);
+    let coscos = numeric.mul(cos_theta_half, cos_v);
+    let sinsin = numeric.mul(sin_theta_half, sin_v_double);
 
-    // let a = numeric.mul(P, numeric.add(1.0, numeric.mul(e, sin_v)));
+    let sincos = numeric.mul(sin_theta_half, cos_v);
+    let cossin = numeric.mul(cos_theta_half, sin_v_double);
 
-    // let x = numeric.mul(R, numeric.sub(coscos, sinsin));
-    // let y = numeric.mul(R, numeric.add(sincos, cossin));
-    // let z = numeric.mul(cos_theta, a);
-    // let w = numeric.mul(sin_theta, a);
+    let a = numeric.mul(P, numeric.add(1.0, numeric.mul(e, sin_v)));
 
-    // let position = d3.range(x.length).map(i=>[x[i], y[i], z[i], w[i] ]);
+    let x = numeric.mul(R, numeric.sub(coscos, sinsin));
+    let y = numeric.mul(R, numeric.add(sincos, cossin));
+    let z = numeric.mul(cos_theta, a);
+    let w = numeric.mul(sin_theta, a);
+
+    let position = d3.range(x.length).map(i=>[x[i], y[i], z[i], w[i] ]);
 
 
-    // let color ='#335577';
 
-    // let view = new GrandTourView({
-    //     canvas: canvas,
-    //     position: position,
-    //     color: color,
-    //     handle: true,
-    //     brush: false,
-    //     zoom: true,
-    //     pointSize: 3,
-    //     mode: 'point',
-    // });
-    // view.play();
-    // window.view = view;
-    // window.theta = theta;
-    // window.x = x;
+    let view = new GrandTourView({
+        canvas: canvas,
+        position: position,
+        color: '#555555',
+        handle: true,
+        brush: false,
+        zoom: true,
+        pointSize: 5,
+        mode: 'point',
+    });
+    view.play();
+    window.view = view;
+    window.theta = theta;
+    window.x = x;
+    // 
 
     //example: csv file
-    
-    d3.csv('data/tplink_test_all.csv')
-    .then(data=>{
-        //array-of-objects to array-of-array
-        let columns = data.columns.slice(1, data.columns.length-1);
-        let features = data.map(row=>columns.map(k=>+row[k]+(Math.random()-0.5)*0.1));
-        let labels = data.map(row=>row.label);
-        return {features, labels};
-    })
-    .then((data)=>{
-        //data pre-processing
-        let mean = math.mean(data.features, 0);
-        let std = math.std(data.features, 0);
-        data.features = data.features.map(row=>numeric.div(row, numeric.add(std, 2)));
-        return data;
-    })
-    .then((data)=>{
-        //plot
-        let sc = d3.scaleOrdinal(d3.schemeCategory10)
-        .domain(['normal', 'abnormal']);
-        let color = data.labels.map(l=>[...utils.hexToRgb(sc(l)), 100]);
-        let view = new GrandTourView({
-            canvas: canvas,
-            position: data.features,
-            color: color,
-            handle: false,
-            brush: false,
-            zoom: true,
-            pointSize: 3,
-            mode: 'point',
-            speed: 0.0001,
-        });
-        view.play();
-        window.view = view;
-        console.log(data);
-    })
+    // d3.csv('data/tplink_test_all.csv')
+    // .then(data=>{
+    //     //array-of-objects to array-of-array
+    //     let columns = data.columns.slice(1, data.columns.length-1);
+    //     let features = data.map(row=>columns.map(k=>+row[k]+(Math.random()-0.5)*0.1));
+    //     let labels = data.map(row=>row.label);
+    //     return {features, labels};
+    // })
+    // .then((data)=>{
+    //     //data pre-processing
+    //     let mean = math.mean(data.features, 0);
+    //     let std = math.std(data.features, 0);
+    //     data.features = data.features.map(row=>numeric.div(row, numeric.add(std, 2)));
+    //     return data;
+    // })
+    // .then((data)=>{
+    //     //plot
+    //     let sc = d3.scaleOrdinal(d3.schemeCategory10)
+    //     .domain(['normal', 'abnormal']);
+    //     let color = data.labels.map(l=>[...utils.hexToRgb(sc(l)), 100]);
+    //     let view = new GrandTourView({
+    //         canvas: canvas,
+    //         position: data.features,
+    //         color: color,
+    //         handle: false,
+    //         brush: false,
+    //         zoom: true,
+    //         pointSize: 3,
+    //         mode: 'point',
+    //         speed: 0.0001,
+    //     });
+    //     view.play();
+    //     window.view = view;
+    // });
 
     
 
