@@ -29,8 +29,16 @@ module.exports = {
             {
                 test: /\.bin$/,
                 use: {loader: 'arraybuffer-loader'}
+            },
+            {
+                test: /\.(frag|vert|glsl)$/,
+                use: [{ loader: 'glsl-shader-loader',
+                        options: {}  }]
+            },
+            {
+                test: /\.css$/,
+                use: ["style-loader", "css-loader"]
             }
-
         ]
     }
 };

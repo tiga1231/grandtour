@@ -1,5 +1,5 @@
 import { GrandTourView } from './GrandTourView';
-import * as utils from './utils';
+import * as utils from './utils/utils';
 
 import * as d3 from 'd3';
 window.d3 = d3;
@@ -155,27 +155,19 @@ window.onload = ()=>{
 
     // exanple 4: klein bottle (4-D non-intersecting immersion)
     // https://en.wikipedia.org/wiki/Klein_bottle
-    const R = 1.0;
+    const R = 1.2;
     const P = 2.0;
     let e = 0.01;
 
-    let [M,N] = [100,150];
+    let [M,N] = [300,200];
     let s = d3.range(M).map(d=>d/M * Math.PI*2);
     let t = d3.range(N).map(d=>d/N * Math.PI*2);
     let theta = [];
     let v = [];
-    // let color =[];
-
     for(let si of s){
         for(let ti of t){
-            theta.push(si);
-            v.push(ti);
-            // color.push([
-            //     100*P5.noise(si*0, ti),
-            //     160*P5.noise(si*1.3, ti*0),
-            //     150*P5.noise(si, ti*1.41), 
-            //     255,
-            // ]);
+            theta.push(si + Math.random());
+            v.push(ti + Math.random());
         }
     }
     let cos_theta = numeric.cos(theta);
@@ -212,18 +204,19 @@ window.onload = ()=>{
     let view = new GrandTourView({
         canvas: canvas,
         position: position,
-        color: '#555555',
+        color: '#888888',
         handle: true,
         brush: false,
         zoom: true,
-        pointSize: 5,
+        pointSize: 2,
         mode: 'point',
     });
     view.play();
     window.view = view;
     window.theta = theta;
     window.x = x;
-    // 
+
+
 
     //example: csv file
     // d3.csv('data/tplink_test_all.csv')

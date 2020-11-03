@@ -10,16 +10,18 @@ void main() {
   if (mode == 0) { //points
     //round points
     float dist = distance(vec2(0.5, 0.5), gl_PointCoord);
-    float eps = 0.05;
-    float c = 0.5 - eps;
-    float g = smoothstep(c+eps, c-eps, dist);
+    float eps = 0.1;
+    float g = 1.0 - smoothstep(0.5-eps, 0.5, dist);
     gl_FragColor.a = v_color.a * g;
     
     vec3 outline_color = mix(vec3(1.0, 1.0, 1.0), gl_FragColor.rgb, 0.1);
+
+    eps = 0.10;
+    g = smoothstep(0.5-eps, 0.5, dist);
     gl_FragColor.rgb = mix(
-      outline_color,
       gl_FragColor.rgb,
-      smoothstep(0.0, 1.0, (0.5 - dist) * 5.0)
+      outline_color,
+      g
     );
   }else{//lines
     //pass

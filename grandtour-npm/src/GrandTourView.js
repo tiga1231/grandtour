@@ -2,9 +2,13 @@ import * as d3 from 'd3';
 
 import * as numeric from 'numeric';
 import * as math from 'mathjs';
-import * as utils from './utils';
+import * as utils from './utils/utils';
 import { GrandTourCore } from './GrandTourCore';
-import * as webgl_utils from './webgl-utils';
+
+import * as webgl_utils from './utils/webgl-utils';
+import {initGL} from './utils/my-gl-utils';
+import vShaderScript from './shaders/vertex.glsl';
+import fShaderScript from './shaders/fragment.glsl';
 
 const MAX_DIM = 16;
 export class GrandTourView {
@@ -48,7 +52,7 @@ export class GrandTourView {
     set pointSize(s){
         this._pointSize = s;
         if(this.webgl){
-            let gl = this.webgl.gl;
+            let gl = this.gl;
             let pointSizeLoc = this.webgl.pointSizeLoc;
             gl.uniform1f(pointSizeLoc, s * devicePixelRatio);
         }
@@ -260,7 +264,7 @@ export class GrandTourView {
                     let c = this.color[i];
                     c[3] = 255;
                 }
-                let gl = this.webgl.gl;
+                let gl = this.gl;
                 gl.bindBuffer(gl.ARRAY_BUFFER, this.webgl.colorBuffer);
                 gl.bufferData(gl.ARRAY_BUFFER,
                               new Uint8Array(utils.flatten(this.color)), gl.STATIC_DRAW);
@@ -357,7 +361,7 @@ export class GrandTourView {
 
     updatePosition(position){
         //upload position
-        let gl = this.webgl.gl;
+        let gl = this.gl;
         let positionBuffers = this.webgl.positionBuffers;
         let positionLocs = this.webgl.positionLocs;
         for(let i=0; i<Math.ceil(this.ndim/4); i++){
@@ -373,13 +377,16 @@ export class GrandTourView {
 
     initGL(){
         this.webgl = {};
-        [this.webgl.gl, this.webgl.program] = webgl_utils.initGL(
-            '#' + this.canvas.attr('id'),
-            ['./shaders/vertex.glsl', './shaders/fragment.glsl']
-        );
+        // [this.gl, this.webgl.program] = webgl_utils.initGL(
+        //     '#' + this.canvas.attr('id'),
+        //     ['./shaders/vertex.glsl', './shaders/fragment.glsl']
+        // );
+        this.gl = initGL(this.canvas.attr('id'), [vShaderScript,fShaderScript]);
 
-        let gl = this.webgl.gl;
-        let program = this.webgl.program;
+
+
+        let gl = this.gl;
+        let program = this.gl.program;
 
         gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
         gl.clearColor(...this.bgColor, 1.0);
@@ -437,7 +444,7 @@ export class GrandTourView {
 
 
     updateColor(color){
-        let gl = this.webgl.gl;
+        let gl = this.gl;
         let colorLoc = this.webgl.colorLoc;
         let colorBuffer = this.webgl.colorBuffer;
         gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
@@ -448,8 +455,18 @@ export class GrandTourView {
     }
 
 
+    // def getWidthHeight
+    getWidthHeight(){
+        // let width = this.svg.node().getBoundingClientRect().width;
+        // let height = this.svg.node().getBoundingClientRect().height;
+        let width = this.canvas.node().clientWidth;
+        let height = this.canvas.node().clientHeight;
+        return [width, height];
+    }
+
+
     setScale(xmin, xmax, ymin, ymax, zmin, zmax){
-        let gl = this.webgl.gl;
+        let gl = this.gl;
         let xDataMinLoc = this.webgl.xDataMinLoc;
         let xDataMaxLoc = this.webgl.xDataMaxLoc;
         let yDataMinLoc = this.webgl.yDataMinLoc;
@@ -458,11 +475,31 @@ export class GrandTourView {
         let zDataMaxLoc = this.webgl.zDataMaxLoc;
 
 
+        let xExtent = [xmin, xmax];
+        let yExtent = [ymin, ymax];
+        let xRange = xExtent[1] - xExtent[0];
+        let yRange = yExtent[1] - yExtent[0];
+
+        let [width, height] = this.getWidthHeight();
+        if(xRange/yRange > width/height){
+          let yCenter = (yExtent[0] + yExtent[1]) / 2;
+          yRange = xRange / width * height;
+          yExtent[0] = yCenter - yRange/2;
+          yExtent[1] = yCenter + yRange/2;
+        }else{
+          let xCenter = (xExtent[0] + xExtent[1]) / 2;
+          xRange = yRange / height * width;
+          xExtent[0] = xCenter - xRange/2;
+          xExtent[1] = xCenter + xRange/2;
+        }
+        let margin = 0.1;
+
+
         this.sx
-        .domain([xmin, xmax])
+        .domain([xExtent[0] - xRange*margin, xExtent[1] + xRange*margin])
         .range([0, this.canvas.attr('width')/devicePixelRatio]);
         this.sy
-        .domain([ymin, ymax])
+        .domain([yExtent[0] - yRange*margin, yExtent[1] + yRange*margin])
         .range([this.canvas.attr('height')/devicePixelRatio, 0]);
 
         //handle zoom event;
@@ -490,7 +527,7 @@ export class GrandTourView {
 
 
     // updateScale(points){
-    //     let gl = this.webgl.gl;
+    //     let gl = this.gl;
     //     if (this.isWindowResized===undefined || this.isWindowResized){
     //         this.xmin = d3.min(points, d=>d[0]);
     //         this.xmax = d3.max(points, d=>d[0]);
@@ -528,7 +565,7 @@ export class GrandTourView {
 
 
     normalizeDepth(points){
-        let gl = this.webgl.gl;
+        let gl = this.gl;
         let zDataMinLoc = this.webgl.zDataMinLoc;
         let zDataMaxLoc = this.webgl.zDataMaxLoc;
 
@@ -544,7 +581,7 @@ export class GrandTourView {
 
     plot(dt){
 
-        let gl = this.webgl.gl;
+        let gl = this.gl;
         // let positionBuffer = this.webgl.positionBuffer;
         // let positionLoc = this.webgl.positionLoc;
         let grandTourMatrixLocs = this.webgl.grandTourMatrixLocs;
@@ -557,7 +594,7 @@ export class GrandTourView {
         // let points = this.position.map(d=>[d[0], d[1], d[2]]);
         // let points = this.gt.project(this.position, dt);
 
-        this.gt.step(dt / Math.sqrt(this.zoomFactor) );
+        this.gt.step(dt / Math.sqrt(this.zoomFactor));
         for(let i=0; i<Math.ceil(this.ndim/4); i++){
             let matrix_i = this.gt.matrix.slice(i*4,i*4+4).map(row=>row.slice(0,4));
             if(matrix_i.length < 4){
